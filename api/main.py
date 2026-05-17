@@ -266,6 +266,12 @@ def trigger_scrape(req: ScrapeRequest):
 # Serve frontend
 # ---------------------------------------------------------------------------
 
+@app.get("/health")
+def health():
+    """Simple liveness probe — always returns 200 if the process is alive."""
+    return {"ok": True}
+
+
 @app.get("/", response_class=HTMLResponse)
 def serve_frontend():
     html_file = FRONTEND_DIR / "apartments.html"
