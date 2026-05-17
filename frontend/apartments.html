@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>סוכן דירות - פייסבוק מרקטפלייס</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --bg2: #1a1d27;
+    --bg3: #252836;
+    --border: #2e3248;
+    --accent: #6c63ff;
+    --accent2: #4ecca3;
+    --text: #e2e8f0;
+    --text-muted: #7c85a2;
+    --red: #ff6b6b;
+    --green: #4ecca3;
+    --yellow: #ffd166;
+    --card-hover: #2e3248;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── Top bar ─────────────────────────────────────────── */
+  header {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+  header h1 { font-size: 1.1rem; color: var(--accent); white-space: nowrap; }
+  .stats-bar {
+    display: flex; gap: 20px; font-size: 0.82rem; color: var(--text-muted);
+    flex: 1;
+  }
+  .stat { display: flex; flex-direction: column; align-items: center; }
+  .stat b { color: var(--text); font-size: 1rem; }
+  .tab-bar { display: flex; gap: 8px; margin-right: auto; }
+  .tab-btn {
+    background: var(--bg3); border: 1px solid var(--border);
+    color: var(--text-muted); padding: 5px 14px; border-radius: 20px;
+    cursor: pointer; font-size: 0.8rem; transition: all .2s;
+  }
+  .tab-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* ── Main layout ─────────────────────────────────────── */
+  .main { display: flex; flex: 1; overflow: hidden; }
+
+  /* ── Sidebar ──────────────────────────────────────────── */
+  aside {
+    width: 280px; min-width: 240px;
+    background: var(--bg2);
+    border-left: 1px solid var(--border);
+    padding: 16px;
+    overflow-y: auto;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  aside h2 { font-size: 0.9rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+  .filter-group { display: flex; flex-direction: column; gap: 6px; }
+  .filter-group label { font-size: 0.8rem; color: var(--text-muted); }
+  .filter-group input, .filter-group select {
+    background: var(--bg3); border: 1px solid var(--border); color: var(--text);
+    padding: 7px 10px; border-radius: 6px; font-size: 0.85rem; width: 100%;
+    outline: none;
+  }
+  .filter-group input:focus, .filter-group select:focus { border-color: var(--accent); }
+  .range-row { display: flex; gap: 6px; }
+  .range-row input { flex: 1; }
+
+  /* Toggle pills */
+  .toggle-group { display: flex; gap: 6px; flex-wrap: wrap; }
+  .toggle-pill {
+    background: var(--bg3); border: 1px solid var(--border);
+    color: var(--text-muted); padding: 5px 12px; border-radius: 20px;
+    cursor: pointer; font-size: 0.8rem; transition: all .15s; user-select: none;
+  }
+  .toggle-pill.active-yes { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .toggle-pill.active-no  { background: var(--red);    border-color: var(--red);    color: #fff; }
+
+  .btn-search {
+    background: var(--accent); color: #fff; border: none;
+    padding: 10px; border-radius: var(--radius); cursor: pointer;
+    font-size: 0.9rem; font-weight: 600; width: 100%;
+    transition: opacity .2s;
+  }
+  .btn-search:hover { opacity: .85; }
+  .btn-scrape {
+    background: var(--bg3); color: var(--accent2); border: 1px solid var(--accent2);
+    padding: 8px; border-radius: var(--radius); cursor: pointer;
+    font-size: 0.8rem; width: 100%; transition: all .2s;
+  }
+  .btn-scrape:hover { background: var(--accent2); color: var(--bg); }
+  .btn-delete {
+    background: var(--bg3); color: var(--red); border: 1px solid var(--red);
+    padding: 8px; border-radius: var(--radius); cursor: pointer;
+    font-size: 0.8rem; width: 100%; transition: all .2s; margin-top: 4px;
+  }
+  .btn-delete:hover { background: var(--red); color: var(--bg); }
+
+  /* Sort */
+  .sort-row { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; }
+  .sort-row select {
+    flex: 1; background: var(--bg3); border: 1px solid var(--border);
+    color: var(--text); padding: 5px 8px; border-radius: 6px; font-size: 0.8rem;
+  }
+
+  /* ── Results panel ─────────────────────────────────────── */
+  .results-panel {
+    flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px;
+  }
+  .no-results {
+    color: var(--text-muted); text-align: center; margin-top: 60px; font-size: 0.95rem;
+  }
+
+  /* ── Card ──────────────────────────────────────────────── */
+  .card {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px 16px;
+    cursor: pointer; transition: border-color .15s, background .15s;
+  }
+  .card:hover { background: var(--card-hover); border-color: var(--accent); }
+  .card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .card-title { font-size: 0.9rem; font-weight: 600; color: var(--text); flex: 1; }
+  .card-price {
+    font-size: 1.1rem; font-weight: 700; color: var(--accent2);
+    white-space: nowrap;
+  }
+  .price-change { font-size: 0.75rem; font-weight: 500; }
+  .price-down { color: var(--green); }
+  .price-up   { color: var(--red);   }
+
+  .card-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+  .tag {
+    font-size: 0.72rem; padding: 2px 8px; border-radius: 10px;
+    background: var(--bg3); border: 1px solid var(--border); color: var(--text-muted);
+  }
+  .tag.broker  { border-color: var(--yellow); color: var(--yellow); }
+  .tag.direct  { border-color: var(--green);  color: var(--green);  }
+  .tag.rent    { border-color: var(--accent);  color: var(--accent); }
+  .tag.sale    { border-color: var(--accent2); color: var(--accent2);}
+
+  /* Card expanded */
+  .card-detail {
+    display: none; margin-top: 12px; padding-top: 12px;
+    border-top: 1px solid var(--border); font-size: 0.82rem; color: var(--text-muted);
+  }
+  .card.open .card-detail { display: block; }
+  .card-link { color: var(--accent); text-decoration: none; font-size: 0.8rem; }
+  .card-link:hover { text-decoration: underline; }
+
+  /* Price history mini-chart */
+  .history-title { font-size: 0.78rem; color: var(--text-muted); margin: 10px 0 4px; }
+  .history-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+  .history-table th { color: var(--text-muted); text-align: right; padding: 3px 6px; border-bottom: 1px solid var(--border); }
+  .history-table td { padding: 3px 6px; }
+
+  /* ── Chat pane ─────────────────────────────────────────── */
+  .chat-toggle {
+    position: fixed; bottom: 20px; left: 20px;
+    background: var(--accent); color: #fff; border: none;
+    width: 52px; height: 52px; border-radius: 50%; font-size: 1.4rem;
+    cursor: pointer; box-shadow: 0 4px 20px rgba(108,99,255,.4);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100;
+  }
+  .chat-pane {
+    position: fixed; bottom: 80px; left: 20px;
+    width: 380px; height: 520px; max-height: 70vh;
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius); flex-direction: column;
+    z-index: 99; box-shadow: 0 8px 40px rgba(0,0,0,.5);
+    display: none;
+  }
+  .chat-pane.open { display: flex; }
+  .chat-header {
+    padding: 12px 16px; background: var(--bg3);
+    border-bottom: 1px solid var(--border);
+    border-radius: var(--radius) var(--radius) 0 0;
+    font-size: 0.9rem; font-weight: 600; display: flex; justify-content: space-between;
+  }
+  .chat-close { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.1rem; }
+  .chat-messages {
+    flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px;
+  }
+  .msg { max-width: 85%; padding: 8px 12px; border-radius: 10px; font-size: 0.84rem; line-height: 1.5; }
+  .msg.user { background: var(--accent); color: #fff; align-self: flex-end; border-radius: 10px 10px 2px 10px; }
+  .msg.assistant { background: var(--bg3); color: var(--text); align-self: flex-start; border-radius: 10px 10px 10px 2px; }
+  .msg.tool-info { background: none; border: 1px dashed var(--border); color: var(--text-muted); font-size: 0.75rem; align-self: flex-start; }
+  .chat-input-row {
+    display: flex; gap: 8px; padding: 10px 12px;
+    border-top: 1px solid var(--border);
+  }
+  .chat-input {
+    flex: 1; background: var(--bg3); border: 1px solid var(--border);
+    color: var(--text); padding: 8px 12px; border-radius: 20px; font-size: 0.85rem;
+    outline: none; resize: none;
+  }
+  .chat-input:focus { border-color: var(--accent); }
+  .chat-send {
+    background: var(--accent); color: #fff; border: none;
+    width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 1rem;
+    flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  }
+  .typing { color: var(--text-muted); font-size: 0.78rem; padding: 4px 12px; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* ── Setup modal ───────────────────────────────────────── */
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,.7);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 200;
+  }
+  .modal-backdrop.hidden { display: none; }
+  .modal {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 14px; padding: 28px 32px; width: 480px; max-width: 95vw;
+    display: flex; flex-direction: column; gap: 16px;
+  }
+  .modal h2 { font-size: 1.1rem; color: var(--accent); }
+  .modal p  { font-size: 0.85rem; color: var(--text-muted); line-height: 1.6; }
+  .modal ol { padding-right: 18px; font-size: 0.85rem; color: var(--text-muted); line-height: 2; }
+  .modal ol a { color: var(--accent); }
+  .modal textarea {
+    width: 100%; height: 120px; background: var(--bg3);
+    border: 1px solid var(--border); color: var(--text);
+    padding: 10px; border-radius: 8px; font-size: 0.8rem;
+    resize: vertical; outline: none; font-family: monospace;
+  }
+  .modal textarea:focus { border-color: var(--accent); }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+  .btn-primary {
+    background: var(--accent); color: #fff; border: none;
+    padding: 9px 20px; border-radius: 8px; cursor: pointer; font-size: 0.88rem;
+    font-weight: 600;
+  }
+  .btn-secondary {
+    background: var(--bg3); color: var(--text-muted);
+    border: 1px solid var(--border); padding: 9px 20px;
+    border-radius: 8px; cursor: pointer; font-size: 0.88rem;
+  }
+  .status-dot {
+    display: inline-block; width: 8px; height: 8px;
+    border-radius: 50%; margin-left: 6px;
+  }
+  .status-dot.on  { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .status-dot.off { background: var(--red);   box-shadow: 0 0 6px var(--red); }
+  .fb-status-btn {
+    background: none; border: 1px solid var(--border);
+    color: var(--text-muted); padding: 4px 12px; border-radius: 20px;
+    cursor: pointer; font-size: 0.75rem; display: flex; align-items: center;
+    gap: 4px; white-space: nowrap;
+  }
+  .fb-status-btn:hover { border-color: var(--accent); color: var(--text); }
+
+  /* Loading spinner */
+  .spinner {
+    display: inline-block; width: 14px; height: 14px;
+    border: 2px solid var(--border); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<!-- ── Setup modal ──────────────────────────────────────── -->
+<div class="modal-backdrop hidden" id="setup-modal">
+  <div class="modal">
+    <h2>🔗 חיבור לפייסבוק</h2>
+    <p>כדי לסרוק מרקטפלייס, האפליקציה צריכה את ה-Cookies של הפייסבוק שלך. זה בטוח — הם נשמרים רק על השרת שלך.</p>
+    <ol>
+      <li>התקן את התוסף <a href="https://chrome.google.com/webstore/detail/cookie-editor/hlkenndednhfkekhgcdicdfddnkalmdm" target="_blank">Cookie-Editor</a> לכרום</li>
+      <li>היכנס לפייסבוק בדפדפן רגיל</li>
+      <li>פתח את Cookie-Editor ולחץ <strong>Export → Export as JSON</strong></li>
+      <li>הדבק את ה-JSON כאן:</li>
+    </ol>
+    <textarea id="cookies-input" placeholder='[{"name":"c_user","value":"...","domain":".facebook.com",...}]'></textarea>
+    <div id="setup-error" style="color:var(--red);font-size:0.8rem;display:none"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeSetup()">ביטול</button>
+      <button class="btn-primary" onclick="submitCookies()">💾 שמור וחבר</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Header ──────────────────────────────────────────── -->
+<header>
+  <h1>🏠 סוכן דירות</h1>
+  <div class="stats-bar">
+    <div class="stat"><b id="stat-total">–</b>סה"כ</div>
+    <div class="stat"><b id="stat-direct">–</b>ישיר</div>
+    <div class="stat"><b id="stat-broker">–</b>תיווך</div>
+    <div class="stat"><b id="stat-avg">–</b>ממוצע ₪</div>
+  </div>
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="setTab('all',this)">הכל</button>
+    <button class="tab-btn" onclick="setTab('changed',this)">שינויי מחיר</button>
+  </div>
+  <button class="fb-status-btn" id="fb-status-btn" onclick="openSetup()">
+    <span class="status-dot off" id="fb-dot"></span>
+    <span id="fb-status-text">פייסבוק: לא מחובר</span>
+  </button>
+</header>
+
+<!-- ── Main ────────────────────────────────────────────── -->
+<div class="main">
+
+  <!-- Results -->
+  <div class="results-panel" id="results">
+    <div class="no-results">לחץ "חפש" כדי לטעון דירות</div>
+  </div>
+
+  <!-- Sidebar (on the left in RTL = right side visually) -->
+  <aside>
+    <h2>סינון</h2>
+
+    <div class="filter-group">
+      <label>עיר</label>
+      <input id="f-city" type="text" placeholder="תל אביב, ירושלים..." list="cities-list" autocomplete="off">
+      <datalist id="cities-list">
+        <option value="תל אביב">
+        <option value="ירושלים">
+        <option value="חיפה">
+        <option value="ראשון לציון">
+        <option value="פתח תקווה">
+        <option value="אשדוד">
+        <option value="נתניה">
+        <option value="באר שבע">
+        <option value="בני ברק">
+        <option value="רמת גן">
+        <option value="רחובות">
+        <option value="בת ים">
+        <option value="הרצליה">
+        <option value="כפר סבא">
+        <option value="מודיעין">
+        <option value="חולון">
+        <option value="לוד">
+        <option value="רמלה">
+        <option value="עפולה">
+        <option value="נהריה">
+        <option value="טבריה">
+        <option value="צפת">
+        <option value="אשקלון">
+        <option value="אילת">
+        <option value="גבעתיים">
+        <option value="רעננה">
+        <option value="הוד השרון">
+        <option value="יבנה">
+        <option value="קריית גת">
+        <option value="קריית אתא">
+        <option value="קריית ביאליק">
+        <option value="נס ציונה">
+        <option value="אור יהודה">
+        <option value="אלעד">
+        <option value="ביתר עילית">
+        <option value="מעלה אדומים">
+        <option value="מודיעין עילית">
+        <option value="אבו גוש">
+        <option value="גבעת שמואל">
+        <option value="פרדס חנה">
+        <option value="זכרון יעקב">
+        <option value="עכו">
+        <option value="כרמיאל">
+      </datalist>
+    </div>
+
+    <div class="filter-group">
+      <label>חדרים</label>
+      <div class="range-row">
+        <input id="f-rooms-min" type="number" placeholder="מינ׳" min="1" max="20" step="0.5">
+        <input id="f-rooms-max" type="number" placeholder="מקס׳" min="1" max="20" step="0.5">
+      </div>
+    </div>
+
+    <div class="filter-group">
+      <label>מחיר ₪</label>
+      <div class="range-row">
+        <input id="f-price-min" type="number" placeholder="מינ׳" min="0" step="1000">
+        <input id="f-price-max" type="number" placeholder="מקס׳" min="0" step="1000">
+      </div>
+    </div>
+
+    <div class="filter-group">
+      <label>קומה</label>
+      <input id="f-floor" type="number" placeholder="כל הקומות" min="0" max="50">
+    </div>
+
+    <div class="filter-group">
+      <label>סוג עסקה</label>
+      <div class="toggle-group">
+        <div class="toggle-pill" id="pill-rent"   onclick="togglePill('rent'  )">להשכרה</div>
+        <div class="toggle-pill" id="pill-sale"   onclick="togglePill('sale'  )">למכירה</div>
+      </div>
+    </div>
+
+    <div class="filter-group">
+      <label>מתווך / ישיר</label>
+      <div class="toggle-group">
+        <div class="toggle-pill" id="pill-direct" onclick="togglePill('direct')">ישיר</div>
+        <div class="toggle-pill" id="pill-broker" onclick="togglePill('broker')">תיווך</div>
+      </div>
+    </div>
+
+    <div class="filter-group sort-row">
+      <label>מיין לפי</label>
+      <select id="sort-by" onchange="renderCards()">
+        <option value="date">תאריך</option>
+        <option value="price_asc">מחיר עולה</option>
+        <option value="price_desc">מחיר יורד</option>
+        <option value="rooms">חדרים</option>
+        <option value="change">שינוי מחיר</option>
+      </select>
+    </div>
+
+    <button class="btn-search" onclick="doFilter()">🔍 חפש</button>
+    <button class="btn-scrape" onclick="doScrape()">⬇ סרוק מפייסבוק</button>
+    <button class="btn-delete" onclick="doClear()">🗑 מחק את כל התוצאות</button>
+  </aside>
+</div>
+
+<!-- ── Chat ──────────────────────────────────────────────── -->
+<button class="chat-toggle" onclick="toggleChat()" title="סוכן AI">💬</button>
+
+<div class="chat-pane" id="chat-pane">
+  <div class="chat-header">
+    <span>🤖 סוכן דירות AI</span>
+    <button class="chat-close" onclick="toggleChat()">✕</button>
+  </div>
+  <div class="chat-messages" id="chat-messages">
+    <div class="msg assistant">שלום! אני יכול לעזור לך למצוא דירות. נסה: "חפש דירות בתל אביב עד 5000 ₪"</div>
+  </div>
+  <div class="typing" id="chat-typing" style="display:none">מקליד<span class="spinner" style="margin-right:6px"></span></div>
+  <div class="chat-input-row">
+    <input class="chat-input" id="chat-input" type="text" placeholder="שאל אותי..." onkeydown="if(event.key==='Enter')sendChat()">
+    <button class="chat-send" onclick="sendChat()">▶</button>
+  </div>
+</div>
+
+<script>
+const API = '';  // same origin
+
+// ── State ─────────────────────────────────────────────────
+let allCards = [];
+let activeTab = 'all';
+let toggleState = { rent: null, sale: null, direct: null, broker: null };
+let chatHistory = [];
+let openCardId = null;
+let historyCache = {};
+
+// ── Init ──────────────────────────────────────────────────
+window.onload = () => {
+  checkFbStatus();
+  loadStats();
+  doFilter();
+};
+
+// ── Facebook session ──────────────────────────────────────
+async function checkFbStatus() {
+  try {
+    const r = await fetch(API + '/session/status');
+    const s = await r.json();
+    setFbStatus(s.connected);
+  } catch(e) { setFbStatus(false); }
+}
+
+function setFbStatus(connected) {
+  document.getElementById('fb-dot').className = 'status-dot ' + (connected ? 'on' : 'off');
+  document.getElementById('fb-status-text').textContent = connected ? 'פייסבוק: מחובר' : 'פייסבוק: לא מחובר';
+}
+
+function openSetup() {
+  document.getElementById('setup-error').style.display = 'none';
+  document.getElementById('cookies-input').value = '';
+  document.getElementById('setup-modal').classList.remove('hidden');
+}
+
+function closeSetup() {
+  document.getElementById('setup-modal').classList.add('hidden');
+}
+
+async function submitCookies() {
+  const raw = document.getElementById('cookies-input').value.trim();
+  const errEl = document.getElementById('setup-error');
+  errEl.style.display = 'none';
+
+  let cookies;
+  try { cookies = JSON.parse(raw); } catch(e) {
+    errEl.textContent = 'JSON לא תקין — ודא שהעתקת נכון מ-Cookie-Editor';
+    errEl.style.display = 'block'; return;
+  }
+  if (!Array.isArray(cookies) || !cookies.length) {
+    errEl.textContent = 'רשימה ריקה';
+    errEl.style.display = 'block'; return;
+  }
+
+  const btn = document.querySelector('#setup-modal .btn-primary');
+  btn.textContent = '⏳ שומר...'; btn.disabled = true;
+  try {
+    const r = await fetch(API + '/session/import', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({cookies})
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || 'שגיאה');
+    setFbStatus(true);
+    closeSetup();
+    alert(`✅ נשמרו ${data.cookies_saved} Cookies — פייסבוק מחובר!`);
+  } catch(e) {
+    errEl.textContent = 'שגיאה: ' + e.message;
+    errEl.style.display = 'block';
+  } finally {
+    btn.textContent = '💾 שמור וחבר'; btn.disabled = false;
+  }
+}
+
+async function loadStats() {
+  try {
+    const r = await fetch(API + '/apartments/stats');
+    const s = await r.json();
+    document.getElementById('stat-total').textContent  = s.total       ?? '–';
+    document.getElementById('stat-direct').textContent = s.direct_count ?? '–';
+    document.getElementById('stat-broker').textContent = s.broker_count ?? '–';
+    document.getElementById('stat-avg').textContent    = s.avg_price ? fmtPrice(s.avg_price) : '–';
+  } catch(e) {}
+}
+
+// ── Tabs ──────────────────────────────────────────────────
+function setTab(tab, el) {
+  activeTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  renderCards();
+}
+
+// ── Toggle pills ──────────────────────────────────────────
+function togglePill(key) {
+  const pill = document.getElementById('pill-' + key);
+  const group = key === 'direct' || key === 'broker' ? ['direct','broker'] : ['rent','sale'];
+  const sibling = group.find(k => k !== key);
+
+  if (pill.classList.contains('active-yes')) {
+    pill.classList.remove('active-yes');
+    toggleState[key] = null;
+  } else {
+    pill.classList.add('active-yes');
+    toggleState[key] = true;
+    // deactivate sibling
+    document.getElementById('pill-' + sibling).classList.remove('active-yes','active-no');
+    toggleState[sibling] = null;
+  }
+}
+
+// ── Filter ────────────────────────────────────────────────
+async function doFilter() {
+  const params = new URLSearchParams();
+  const city      = document.getElementById('f-city').value.trim();
+  const roomsMin  = document.getElementById('f-rooms-min').value;
+  const roomsMax  = document.getElementById('f-rooms-max').value;
+  const priceMin  = document.getElementById('f-price-min').value;
+  const priceMax  = document.getElementById('f-price-max').value;
+  const floor     = document.getElementById('f-floor').value;
+
+  if (city)     params.set('city', city);
+  if (roomsMin) params.set('min_rooms', roomsMin);
+  if (roomsMax) params.set('max_rooms', roomsMax);
+  if (priceMin) params.set('min_price', priceMin);
+  if (priceMax) params.set('max_price', priceMax);
+  if (floor)    params.set('floor', floor);
+
+  // broker
+  if (toggleState.direct === true) params.set('broker', 'false');
+  if (toggleState.broker === true) params.set('broker', 'true');
+
+  // for_rent
+  if (toggleState.rent === true) params.set('for_rent', 'true');
+  if (toggleState.sale === true) params.set('for_rent', 'false');
+
+  showLoading();
+  try {
+    const r = await fetch(API + '/apartments?' + params.toString());
+    allCards = await r.json();
+    renderCards();
+    loadStats();
+  } catch(e) {
+    showError('שגיאה בטעינת נתונים: ' + e.message);
+  }
+}
+
+// ── Clear all ─────────────────────────────────────────────
+async function doClear() {
+  if (!confirm('למחוק את כל הדירות השמורות? לא ניתן לשחזר.')) return;
+  const btn = document.querySelector('.btn-delete');
+  btn.disabled = true;
+  try {
+    const r = await fetch(API + '/apartments', { method: 'DELETE' });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || JSON.stringify(data));
+    alert(`נמחקו ${data.deleted} דירות`);
+    await doFilter();
+  } catch(e) {
+    alert('שגיאה: ' + e.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── Scrape ────────────────────────────────────────────────
+async function doScrape() {
+  const btn = document.querySelector('.btn-scrape');
+  btn.disabled = true;
+  btn.textContent = '⏳ סורק...';
+  try {
+    const city = document.getElementById('f-city').value.trim();
+    const query = city ? `דירה ${city}` : 'דירה';
+    const r = await fetch(API + '/apartments/scrape', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({query, max_results: 40})
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || data.message || JSON.stringify(data));
+    alert(data.message || `נסרקו ${data.scraped} דירות`);
+    await doFilter();
+  } catch(e) {
+    alert('שגיאה: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '⬇ סרוק מפייסבוק';
+  }
+}
+
+// ── Render ────────────────────────────────────────────────
+function renderCards() {
+  const panel = document.getElementById('results');
+  let cards = [...allCards];
+
+  if (activeTab === 'changed') {
+    cards = cards.filter(c => c.price_change !== null && c.price_change !== 0);
+  }
+
+  const sort = document.getElementById('sort-by').value;
+  cards.sort((a, b) => {
+    if (sort === 'price_asc')  return (a.price ?? Infinity) - (b.price ?? Infinity);
+    if (sort === 'price_desc') return (b.price ?? 0) - (a.price ?? 0);
+    if (sort === 'rooms')      return (b.rooms ?? 0) - (a.rooms ?? 0);
+    if (sort === 'change')     return Math.abs(b.price_change ?? 0) - Math.abs(a.price_change ?? 0);
+    // date (default)
+    return (b.last_updated ?? '').localeCompare(a.last_updated ?? '');
+  });
+
+  if (!cards.length) {
+    panel.innerHTML = '<div class="no-results">לא נמצאו דירות התואמות את הסינון</div>';
+    return;
+  }
+
+  panel.innerHTML = cards.map(c => cardHTML(c)).join('');
+}
+
+function cleanPriceText(pt) {
+  if (!pt) return '–';
+  let cleaned = pt.replace(/\$US\s*/g,'').replace(/USD\s*/g,'').replace(/\$\s*/g,'').trim();
+  // Only add ₪ if the text doesn't already contain a currency marker
+  if (!cleaned.includes('₪') && !cleaned.includes('ש"ח') && !cleaned.includes('ILS')) {
+    cleaned += ' ₪';
+  }
+  return cleaned;
+}
+
+function cardHTML(c) {
+  const priceStr = c.price ? fmtPrice(c.price) + ' ₪' : cleanPriceText(c.price_text);
+  let changeHTML = '';
+  if (c.price_change !== null && c.price_change !== 0) {
+    const sign  = c.price_change < 0 ? '↓' : '↑';
+    const cls   = c.price_change < 0 ? 'price-down' : 'price-up';
+    const pct   = c.price_change_pct !== null ? ` (${c.price_change_pct}%)` : '';
+    changeHTML = `<span class="price-change ${cls}">${sign}${Math.abs(c.price_change).toLocaleString()}${pct}</span>`;
+  }
+
+  const tags = [];
+  if (c.rooms)          tags.push(formatRooms(c.rooms));
+  if (c.city)           tags.push(c.city);
+  if (c.neighborhood)   tags.push(c.neighborhood);
+  if (c.floor != null)  tags.push(`קומה ${c.floor}`);
+  if (c.size_sqm)       tags.push(`${c.size_sqm} מ"ר`);
+  if (c.property_type)  tags.push(c.property_type);
+
+  let brokerTag = '';
+  if (c.broker === true)  brokerTag = '<span class="tag broker">תיווך</span>';
+  if (c.broker === false) brokerTag = '<span class="tag direct">ישיר</span>';
+
+  let txTag = '';
+  if (c.for_rent === true)  txTag = '<span class="tag rent">השכרה</span>';
+  if (c.for_rent === false) txTag = '<span class="tag sale">מכירה</span>';
+
+  const tagsHTML = tags.map(t => `<span class="tag">${esc(t)}</span>`).join('') + brokerTag + txTag;
+
+  return `
+  <div class="card" id="card-${esc(c.listing_id)}" onclick="toggleCard('${esc(c.listing_id)}',this)">
+    <div class="card-top">
+      <span class="card-title">${esc(c.title || '–')}</span>
+      <span class="card-price">${priceStr} ${changeHTML}</span>
+    </div>
+    <div class="card-tags">${tagsHTML}</div>
+    <div class="card-detail" id="detail-${esc(c.listing_id)}">
+      <div>${esc(c.description || '')}</div>
+      <a class="card-link" href="${esc(c.url)}" target="_blank" rel="noopener">פתח במרקטפלייס ↗</a>
+      <div class="history-title">היסטוריית מחירים</div>
+      <div id="hist-${esc(c.listing_id)}">טוען...</div>
+    </div>
+  </div>`;
+}
+
+async function toggleCard(id, el) {
+  const detail = document.getElementById('detail-' + id);
+  if (!detail) return;
+
+  if (el.classList.contains('open')) {
+    el.classList.remove('open');
+    return;
+  }
+
+  // Close others
+  document.querySelectorAll('.card.open').forEach(c => c.classList.remove('open'));
+  el.classList.add('open');
+
+  // Load history
+  if (!historyCache[id]) {
+    try {
+      const r = await fetch(API + '/apartments/history/' + encodeURIComponent(id));
+      if (!r.ok) throw new Error(r.status);
+      historyCache[id] = await r.json();
+    } catch(e) { historyCache[id] = []; }
+  }
+  const hist = historyCache[id];
+  const histEl = document.getElementById('hist-' + id);
+  if (!hist.length) {
+    histEl.textContent = 'אין היסטוריה';
+    return;
+  }
+  histEl.innerHTML = `
+    <table class="history-table">
+      <tr><th>תאריך</th><th>מחיר ₪</th></tr>
+      ${hist.map(h => `<tr><td>${h.recorded_at.slice(0,16).replace('T',' ')}</td><td>${fmtPrice(h.price)}</td></tr>`).join('')}
+    </table>`;
+}
+
+// ── Chat ──────────────────────────────────────────────────
+function toggleChat() {
+  document.getElementById('chat-pane').classList.toggle('open');
+}
+
+async function sendChat() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+
+  appendMsg('user', text);
+  chatHistory.push({role:'user', content: text});
+
+  const typing = document.getElementById('chat-typing');
+  typing.style.display = 'block';
+
+  let assistantMsg = '';
+  const msgEl = appendMsg('assistant', '');
+
+  try {
+    const resp = await fetch(API + '/chat/stream', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({messages: chatHistory})
+    });
+
+    if (!resp.ok) {
+      const errText = await resp.text();
+      throw new Error(`שגיאת שרת ${resp.status}: ${errText}`);
+    }
+
+    const reader = resp.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '';
+
+    while (true) {
+      const {done, value} = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, {stream: true});
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const raw = line.slice(6);
+        if (raw === '[DONE]') break;
+        try {
+          const ev = JSON.parse(raw);
+          if (ev.type === 'text') {
+            assistantMsg += ev.text;
+            msgEl.textContent = assistantMsg;
+            scrollChat();
+          } else if (ev.type === 'tool_call') {
+            appendMsg('tool-info', `⚙ ${ev.name}(${JSON.stringify(ev.input)})`);
+            scrollChat();
+          }
+        } catch(e) {}
+      }
+    }
+  } catch(e) {
+    msgEl.textContent = 'שגיאה: ' + e.message;
+  }
+
+  typing.style.display = 'none';
+  if (assistantMsg) {
+    chatHistory.push({role:'assistant', content: assistantMsg});
+  }
+  // Refresh listings after agent might have scraped
+  doFilter();
+}
+
+function appendMsg(role, text) {
+  const box = document.getElementById('chat-messages');
+  const el = document.createElement('div');
+  el.className = 'msg ' + role;
+  el.textContent = text;
+  box.appendChild(el);
+  scrollChat();
+  return el;
+}
+
+function scrollChat() {
+  const box = document.getElementById('chat-messages');
+  box.scrollTop = box.scrollHeight;
+}
+
+// ── Helpers ────────────────────────────────────────────────
+function fmtPrice(n) {
+  return Number(n).toLocaleString('he-IL');
+}
+
+function formatRooms(r) {
+  if (!r) return '';
+  const n = Number(r);
+  if (n === Math.floor(n)) return `${n} חד׳`;
+  const whole = Math.floor(n);
+  return whole > 0 ? `${whole}½ חד׳` : '½ חד׳';
+}
+function esc(s) {
+  return String(s ?? '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function showLoading() {
+  document.getElementById('results').innerHTML =
+    '<div class="no-results"><span class="spinner"></span> טוען...</div>';
+}
+function showError(msg) {
+  document.getElementById('results').innerHTML =
+    `<div class="no-results" style="color:var(--red)">${esc(msg)}</div>`;
+}
+</script>
+</body>
+</html>

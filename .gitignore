@@ -1,0 +1,7 @@
+fb_session.json
+apartments.db
+/data/
+__pycache__/
+*.pyc
+.env
+.env.*
