@@ -272,6 +272,16 @@
     font-size: 0.8rem; width: 100%; transition: all .2s; margin-top: 4px;
   }
   .btn-export:hover { border-color: var(--accent2); color: var(--accent2); }
+  .btn-yad2 {
+    background: var(--bg3); color: #ff6b35; border: 1px solid #ff6b35;
+    padding: 8px; border-radius: var(--radius); cursor: pointer;
+    font-size: 0.8rem; width: 100%; transition: all .2s;
+  }
+  .btn-yad2:hover { background: #ff6b35; color: var(--bg); }
+
+  /* Source tag */
+  .tag.src-fb   { border-color: #1877f2; color: #1877f2; }
+  .tag.src-yad2 { border-color: #ff6b35; color: #ff6b35; }
 
   /* Scrollbar */
   ::-webkit-scrollbar { width: 5px; }
@@ -493,6 +503,7 @@
 
     <button class="btn-search" onclick="doFilter()">🔍 חפש</button>
     <button class="btn-scrape" onclick="doScrape()">⬇ סרוק מפייסבוק</button>
+    <button class="btn-yad2"  onclick="doScrapeYad2()">🏠 סרוק יד2</button>
     <button class="btn-delete" onclick="doClear()">🗑 מחק את כל התוצאות</button>
     <button class="btn-export" onclick="exportCSV()">📤 ייצוא ל-Excel</button>
   </aside>
@@ -751,6 +762,40 @@ async function doScrape() {
   }
 }
 
+// ── Scrape Yad2 ──────────────────────────────────────────
+async function doScrapeYad2() {
+  const btn = document.querySelector('.btn-yad2');
+  btn.disabled = true;
+  btn.textContent = '⏳ מושך מיד2...';
+  try {
+    const city     = document.getElementById('f-city').value.trim() || null;
+    const roomsMin = parseFloat(document.getElementById('f-rooms-min').value) || null;
+    const roomsMax = parseFloat(document.getElementById('f-rooms-max').value) || null;
+    const priceMin = parseInt(document.getElementById('f-price-min').value)   || null;
+    const priceMax = parseInt(document.getElementById('f-price-max').value)   || null;
+    const forRent  = toggleState.rent === true ? true : toggleState.sale === true ? false : true;
+
+    const r = await fetch(API + '/apartments/scrape/yad2', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        city, min_rooms: roomsMin, max_rooms: roomsMax,
+        min_price: priceMin, max_price: priceMax,
+        for_rent: forRent, max_results: 40
+      })
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || data.message || JSON.stringify(data));
+    alert(data.message || `נסרקו ${data.scraped} דירות מיד2`);
+    await doFilter();
+  } catch(e) {
+    alert('שגיאה: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🏠 סרוק יד2';
+  }
+}
+
 // ── Render ────────────────────────────────────────────────
 function renderCards() {
   const panel = document.getElementById('results');
@@ -906,7 +951,12 @@ function cardHTML(c) {
   if (c.for_rent === true)  txTag = '<span class="tag rent">השכרה</span>';
   if (c.for_rent === false) txTag = '<span class="tag sale">מכירה</span>';
 
-  const tagsHTML = tags.map(t => `<span class="tag">${esc(t)}</span>`).join('') + brokerTag + txTag;
+  const isYad2 = String(c.listing_id).startsWith('yad2_');
+  const srcTag = isYad2
+    ? '<span class="tag src-yad2">יד2</span>'
+    : '<span class="tag src-fb">FB</span>';
+
+  const tagsHTML = tags.map(t => `<span class="tag">${esc(t)}</span>`).join('') + brokerTag + txTag + srcTag;
 
   return `
   <div class="card" id="card-${esc(c.listing_id)}" onclick="toggleCard('${esc(c.listing_id)}',this)">

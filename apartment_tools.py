@@ -7,6 +7,7 @@ from typing import Any, Optional
 import apartments_db as db
 import extractor
 import scraper
+import yad2_scraper
 
 
 def scrape_apartments(query: str = "דירה", max_results: int = 40) -> dict[str, Any]:
@@ -32,6 +33,47 @@ def scrape_apartments(query: str = "דירה", max_results: int = 40) -> dict[st
         "stored": stored,
         "failed": failed,
         "message": f"נשמרו {stored} דירות מתוך {len(listings)} שנמצאו" + (f" ({failed} נכשלו)" if failed else ""),
+    }
+
+
+def scrape_yad2_apartments(
+    city: Optional[str] = None,
+    min_rooms: Optional[float] = None,
+    max_rooms: Optional[float] = None,
+    min_price: Optional[int] = None,
+    max_price: Optional[int] = None,
+    for_rent: bool = True,
+    max_results: int = 40,
+) -> dict[str, Any]:
+    """Scrape Yad2, use pre-structured data (no extractor needed), store in DB."""
+    listings = yad2_scraper.scrape_yad2(
+        city=city,
+        min_rooms=min_rooms,
+        max_rooms=max_rooms,
+        min_price=min_price,
+        max_price=max_price,
+        for_rent=for_rent,
+        max_results=max_results,
+    )
+    if not listings:
+        return {"scraped": 0, "stored": 0, "message": "לא נמצאו תוצאות ביד2"}
+
+    stored = 0
+    failed = 0
+    for listing in listings:
+        extracted = listing.pop("_extracted", {})
+        try:
+            db.upsert_apartment(listing, extracted)
+            stored += 1
+        except Exception as exc:
+            failed += 1
+            print(f"[yad2 upsert error] {listing.get('listing_id')}: {exc}")
+
+    return {
+        "scraped": len(listings),
+        "stored": stored,
+        "failed": failed,
+        "message": f"נשמרו {stored} דירות מיד2" + (f" ({failed} נכשלו)" if failed else ""),
     }
 
 
@@ -129,10 +171,27 @@ TOOLS = [
         "description": "בודק אם הסקרייפר עובד תקין",
         "input_schema": {"type": "object", "properties": {}},
     },
+    {
+        "name": "scrape_yad2_apartments",
+        "description": "מחפש דירות באתר יד2 ושומר בבסיס הנתונים",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "city":       {"type": "string",  "description": "שם עיר בעברית"},
+                "min_rooms":  {"type": "number",  "description": "מינימום חדרים"},
+                "max_rooms":  {"type": "number",  "description": "מקסימום חדרים"},
+                "min_price":  {"type": "integer", "description": "מחיר מינימלי ₪"},
+                "max_price":  {"type": "integer", "description": "מחיר מקסימלי ₪"},
+                "for_rent":   {"type": "boolean", "description": "true=השכרה, false=מכירה"},
+                "max_results":{"type": "integer", "description": "מספר מקסימלי תוצאות"},
+            },
+        },
+    },
 ]
 
 TOOL_MAP = {
     "scrape_apartments": scrape_apartments,
+    "scrape_yad2_apartments": scrape_yad2_apartments,
     "filter_apartments": filter_apartments,
     "get_price_history": get_price_history,
     "get_apartment_stats": get_apartment_stats,

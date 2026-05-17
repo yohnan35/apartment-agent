@@ -278,6 +278,32 @@ def trigger_scrape(req: ScrapeRequest):
         raise HTTPException(status_code=500, detail=str(exc))
 
 
+class Yad2ScrapeRequest(BaseModel):
+    city: Optional[str] = None
+    min_rooms: Optional[float] = None
+    max_rooms: Optional[float] = None
+    min_price: Optional[int] = None
+    max_price: Optional[int] = None
+    for_rent: bool = True
+    max_results: int = 40
+
+
+@app.post("/apartments/scrape/yad2")
+def trigger_yad2_scrape(req: Yad2ScrapeRequest):
+    try:
+        return tools.scrape_yad2_apartments(
+            city=req.city,
+            min_rooms=req.min_rooms,
+            max_rooms=req.max_rooms,
+            min_price=req.min_price,
+            max_price=req.max_price,
+            for_rent=req.for_rent,
+            max_results=req.max_results,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
 # ---------------------------------------------------------------------------
 # Serve frontend
 # ---------------------------------------------------------------------------
