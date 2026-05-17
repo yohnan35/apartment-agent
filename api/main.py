@@ -52,6 +52,20 @@ class CookiesRequest(BaseModel):
     cookies: list[dict]  # Raw cookies from Cookie-Editor browser extension
 
 
+def _normalize_same_site(val: str | None) -> str:
+    """Map Cookie-Editor sameSite values → Playwright accepted values (Strict|Lax|None)."""
+    if not val:
+        return "Lax"
+    mapping = {
+        "strict": "Strict",
+        "lax": "Lax",
+        "none": "None",
+        "no_restriction": "None",   # Chrome extension value
+        "unspecified": "Lax",
+    }
+    return mapping.get(str(val).lower(), "Lax")
+
+
 def _convert_cookies_to_playwright(raw_cookies: list[dict]) -> dict:
     """Convert Cookie-Editor extension format → Playwright storage_state format."""
     pw_cookies = []
@@ -63,7 +77,7 @@ def _convert_cookies_to_playwright(raw_cookies: list[dict]) -> dict:
             "path": c.get("path", "/"),
             "httpOnly": c.get("httpOnly", False),
             "secure": c.get("secure", False),
-            "sameSite": c.get("sameSite", "Lax"),
+            "sameSite": _normalize_same_site(c.get("sameSite")),
         }
         exp = c.get("expirationDate") or c.get("expires")
         if exp:
