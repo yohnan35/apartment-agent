@@ -24,7 +24,17 @@ MARKETPLACE_BASE = "https://www.facebook.com/marketplace/112308178781459"
 async def scrape(query: str = "דירה", max_results: int = 40) -> list[dict]:
     """Return a list of listing dicts from Facebook Marketplace."""
     async with async_playwright() as pw:
-        browser = await pw.chromium.launch(headless=True)
+        browser = await pw.chromium.launch(
+            headless=True,
+            args=[
+                "--disable-blink-features=AutomationControlled",
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--disable-dev-shm-usage",
+                "--disable-infobars",
+                "--window-size=1280,800",
+            ],
+        )
         ctx = await _load_session(browser)
         page = await ctx.new_page()
         try:
@@ -77,11 +87,38 @@ async def login_and_save_session() -> None:
 # Internals
 # ---------------------------------------------------------------------------
 
+_USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/124.0.0.0 Safari/537.36"
+)
+
+_CONTEXT_OPTIONS = dict(
+    user_agent=_USER_AGENT,
+    viewport={"width": 1280, "height": 800},
+    locale="he-IL",
+    timezone_id="Asia/Jerusalem",
+    extra_http_headers={
+        "Accept-Language": "he-IL,he;q=0.9,en-US;q=0.8,en;q=0.7",
+    },
+)
+
+_STEALTH_SCRIPT = """
+    Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
+    Object.defineProperty(navigator, 'plugins', {get: () => [1,2,3]});
+    Object.defineProperty(navigator, 'languages', {get: () => ['he-IL','he','en-US','en']});
+    window.chrome = { runtime: {} };
+"""
+
+
 async def _load_session(browser) -> BrowserContext:
     if SESSION_FILE.exists():
         state = json.loads(SESSION_FILE.read_text(encoding="utf-8"))
-        return await browser.new_context(storage_state=state)
-    return await browser.new_context()
+        ctx = await browser.new_context(storage_state=state, **_CONTEXT_OPTIONS)
+    else:
+        ctx = await browser.new_context(**_CONTEXT_OPTIONS)
+    await ctx.add_init_script(_STEALTH_SCRIPT)
+    return ctx
 
 
 async def _scrape_page(page: Page, query: str, max_results: int) -> list[dict]:
@@ -99,6 +136,9 @@ async def _scrape_page(page: Page, query: str, max_results: int) -> list[dict]:
     # Detect login wall — FB redirects to /login or shows a login form
     if "/login" in page.url or await page.locator('input[name="email"]').count() > 0:
         raise RuntimeError("פייסבוק דורש התחברות — יש לייצא Cookies מחדש מהדפדפן")
+
+    # Small human-like delay after page load
+    await asyncio.sleep(1.2)
 
     # Dismiss cookie/login dialogs if present
     for selector in [
@@ -138,6 +178,11 @@ async def _scrape_page(page: Page, query: str, max_results: int) -> list[dict]:
                     listings.append(listing)
             except Exception:
                 continue
+
+        # Check for login wall mid-scrape
+        if "/login" in page.url or await page.locator('input[name="email"]').count() > 0:
+            print("[scraper] session expired mid-scrape — returning partial results")
+            break
 
         await page.evaluate("window.scrollBy(0, window.innerHeight * 3)")
         await asyncio.sleep(1.5)
