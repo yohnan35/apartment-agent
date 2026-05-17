@@ -163,6 +163,7 @@ def get_apartments(
     broker: Optional[bool] = None,
     floor: Optional[int] = None,
     for_rent: Optional[bool] = None,
+    hours_fresh: Optional[int] = None,
     limit: int = 200,
 ) -> list[dict]:
     conditions = []
@@ -192,6 +193,9 @@ def get_apartments(
     if for_rent is not None:
         conditions.append("for_rent = ?")
         params.append(1 if for_rent else 0)
+    if hours_fresh is not None:
+        conditions.append("first_seen >= datetime('now', ?)")
+        params.append(f"-{hours_fresh} hours")
 
     conditions.append("(price_text IS NULL OR price_text = '' OR (price_text NOT LIKE '%$%' AND price_text NOT LIKE '%USD%'))")
     where = ("WHERE " + " AND ".join(conditions)) if conditions else ""

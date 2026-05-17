@@ -232,6 +232,7 @@ def get_apartments(
     broker: Optional[bool] = None,
     floor: Optional[int] = None,
     for_rent: Optional[bool] = None,
+    hours_fresh: Optional[int] = None,
     limit: int = Query(default=200, le=500),
 ):
     return db.get_apartments(
@@ -243,6 +244,7 @@ def get_apartments(
         broker=broker,
         floor=floor,
         for_rent=for_rent,
+        hours_fresh=hours_fresh,
         limit=limit,
     )
 

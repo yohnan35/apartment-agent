@@ -55,6 +55,30 @@
     cursor: pointer; font-size: 0.8rem; transition: all .2s;
   }
   .tab-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .tab-btn.fresh-tab { border-color: var(--green); color: var(--green); }
+  .tab-btn.fresh-tab.active { background: var(--green); border-color: var(--green); color: var(--bg); }
+
+  /* New badge */
+  .badge-new {
+    display: inline-block; background: var(--green); color: var(--bg);
+    font-size: 0.65rem; font-weight: 700; padding: 1px 6px; border-radius: 8px;
+    margin-right: 6px; vertical-align: middle; letter-spacing: 0.5px;
+    animation: pulse-new 2s ease-in-out infinite;
+  }
+  @keyframes pulse-new {
+    0%, 100% { opacity: 1; } 50% { opacity: 0.6; }
+  }
+
+  /* Auto-refresh indicator */
+  .refresh-indicator {
+    font-size: 0.72rem; color: var(--text-muted);
+    display: flex; align-items: center; gap: 4px;
+  }
+  .refresh-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--green); animation: blink 2s ease-in-out infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
 
   /* ── Main layout ─────────────────────────────────────── */
   .main { display: flex; flex: 1; overflow: hidden; }
@@ -311,7 +335,11 @@
   </div>
   <div class="tab-bar">
     <button class="tab-btn active" onclick="setTab('all',this)">הכל</button>
+    <button class="tab-btn fresh-tab" onclick="setTab('fresh',this)">🆕 טרי</button>
     <button class="tab-btn" onclick="setTab('changed',this)">שינויי מחיר</button>
+  </div>
+  <div class="refresh-indicator" id="refresh-indicator" style="display:none">
+    <div class="refresh-dot"></div><span id="refresh-countdown"></span>
   </div>
   <button class="fb-status-btn" id="fb-status-btn" onclick="openSetup()">
     <span class="status-dot off" id="fb-dot"></span>
@@ -463,6 +491,9 @@ let toggleState = { rent: null, sale: null, direct: null, broker: null };
 let chatHistory = [];
 let openCardId = null;
 let historyCache = {};
+let autoRefreshTimer = null;
+let autoRefreshCountdown = 0;
+const AUTO_REFRESH_SECONDS = 300; // 5 minutes
 
 // ── Init ──────────────────────────────────────────────────
 window.onload = () => {
@@ -547,7 +578,40 @@ function setTab(tab, el) {
   activeTab = tab;
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   el.classList.add('active');
+  if (tab === 'fresh') {
+    startAutoRefresh();
+  } else {
+    stopAutoRefresh();
+  }
   renderCards();
+}
+
+// ── Auto-refresh (fresh tab) ──────────────────────────────
+function startAutoRefresh() {
+  stopAutoRefresh();
+  document.getElementById('refresh-indicator').style.display = 'flex';
+  autoRefreshCountdown = AUTO_REFRESH_SECONDS;
+  updateCountdown();
+  autoRefreshTimer = setInterval(() => {
+    autoRefreshCountdown--;
+    updateCountdown();
+    if (autoRefreshCountdown <= 0) {
+      autoRefreshCountdown = AUTO_REFRESH_SECONDS;
+      doFilter();
+    }
+  }, 1000);
+}
+
+function stopAutoRefresh() {
+  if (autoRefreshTimer) { clearInterval(autoRefreshTimer); autoRefreshTimer = null; }
+  document.getElementById('refresh-indicator').style.display = 'none';
+}
+
+function updateCountdown() {
+  const m = Math.floor(autoRefreshCountdown / 60);
+  const s = autoRefreshCountdown % 60;
+  document.getElementById('refresh-countdown').textContent =
+    `מתרענן בעוד ${m}:${String(s).padStart(2,'0')}`;
 }
 
 // ── Toggle pills ──────────────────────────────────────────
@@ -592,6 +656,8 @@ async function doFilter() {
   // for_rent
   if (toggleState.rent === true) params.set('for_rent', 'true');
   if (toggleState.sale === true) params.set('for_rent', 'false');
+
+  if (activeTab === 'fresh') params.set('hours_fresh', '1');
 
   showLoading();
   try {
@@ -667,7 +733,10 @@ function renderCards() {
   });
 
   if (!cards.length) {
-    panel.innerHTML = '<div class="no-results">לא נמצאו דירות התואמות את הסינון</div>';
+    const msg = activeTab === 'fresh'
+      ? '🕐 אין דירות חדשות מהשעה האחרונה — לחץ "סרוק מפייסבוק" כדי לחפש'
+      : 'לא נמצאו דירות התואמות את הסינון';
+    panel.innerHTML = `<div class="no-results">${msg}</div>`;
     return;
   }
 
@@ -684,7 +753,14 @@ function cleanPriceText(pt) {
   return cleaned;
 }
 
+function isNew(firstSeen) {
+  if (!firstSeen) return false;
+  const t = new Date(firstSeen.replace(' ','T') + 'Z');
+  return (Date.now() - t.getTime()) < 60 * 60 * 1000; // < 1 hour
+}
+
 function cardHTML(c) {
+  const newBadge = isNew(c.first_seen) ? '<span class="badge-new">NEW</span>' : '';
   const priceStr = c.price ? fmtPrice(c.price) + ' ₪' : cleanPriceText(c.price_text);
   let changeHTML = '';
   if (c.price_change !== null && c.price_change !== 0) {
@@ -715,7 +791,7 @@ function cardHTML(c) {
   return `
   <div class="card" id="card-${esc(c.listing_id)}" onclick="toggleCard('${esc(c.listing_id)}',this)">
     <div class="card-top">
-      <span class="card-title">${esc(c.title || '–')}</span>
+      <span class="card-title">${newBadge}${esc(c.title || '–')}</span>
       <span class="card-price">${priceStr} ${changeHTML}</span>
     </div>
     <div class="card-tags">${tagsHTML}</div>
