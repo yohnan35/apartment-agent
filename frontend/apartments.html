@@ -240,6 +240,39 @@
   }
   .typing { color: var(--text-muted); font-size: 0.78rem; padding: 4px 12px; }
 
+  /* Score badge */
+  .score-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 50%;
+    font-size: 0.75rem; font-weight: 700; flex-shrink: 0;
+  }
+  .score-high   { background: #1a3d2b; color: var(--green);  border: 1.5px solid var(--green); }
+  .score-medium { background: #3d3010; color: var(--yellow); border: 1.5px solid var(--yellow); }
+  .score-low    { background: #3d1a1a; color: var(--red);    border: 1.5px solid var(--red); }
+
+  /* Price analysis */
+  .price-analysis {
+    font-size: 0.72rem; padding: 2px 7px; border-radius: 10px; margin-top: 5px;
+    display: inline-block;
+  }
+  .price-cheap    { background: #1a3d2b; color: var(--green); }
+  .price-expensive{ background: #3d1a1a; color: var(--red); }
+
+  /* Heart / favorite */
+  .heart-btn {
+    background: none; border: none; cursor: pointer; font-size: 1.1rem;
+    padding: 0 4px; line-height: 1; transition: transform .15s; flex-shrink: 0;
+  }
+  .heart-btn:hover { transform: scale(1.3); }
+
+  /* Export button */
+  .btn-export {
+    background: var(--bg3); color: var(--text-muted); border: 1px solid var(--border);
+    padding: 8px; border-radius: var(--radius); cursor: pointer;
+    font-size: 0.8rem; width: 100%; transition: all .2s; margin-top: 4px;
+  }
+  .btn-export:hover { border-color: var(--accent2); color: var(--accent2); }
+
   /* Scrollbar */
   ::-webkit-scrollbar { width: 5px; }
   ::-webkit-scrollbar-track { background: transparent; }
@@ -337,6 +370,7 @@
     <button class="tab-btn active" onclick="setTab('all',this)">הכל</button>
     <button class="tab-btn fresh-tab" onclick="setTab('fresh',this)">🆕 טרי</button>
     <button class="tab-btn" onclick="setTab('changed',this)">שינויי מחיר</button>
+    <button class="tab-btn" onclick="setTab('favorites',this)">❤️ מועדפים</button>
   </div>
   <div class="refresh-indicator" id="refresh-indicator" style="display:none">
     <div class="refresh-dot"></div><span id="refresh-countdown"></span>
@@ -460,6 +494,7 @@
     <button class="btn-search" onclick="doFilter()">🔍 חפש</button>
     <button class="btn-scrape" onclick="doScrape()">⬇ סרוק מפייסבוק</button>
     <button class="btn-delete" onclick="doClear()">🗑 מחק את כל התוצאות</button>
+    <button class="btn-export" onclick="exportCSV()">📤 ייצוא ל-Excel</button>
   </aside>
 </div>
 
@@ -494,6 +529,8 @@ let historyCache = {};
 let autoRefreshTimer = null;
 let autoRefreshCountdown = 0;
 const AUTO_REFRESH_SECONDS = 300; // 5 minutes
+let favorites = new Set(JSON.parse(localStorage.getItem('apt_favorites') || '[]'));
+let cityAverages = {};
 
 // ── Init ──────────────────────────────────────────────────
 window.onload = () => {
@@ -663,6 +700,7 @@ async function doFilter() {
   try {
     const r = await fetch(API + '/apartments?' + params.toString());
     allCards = await r.json();
+    cityAverages = computeCityAverages(allCards);
     renderCards();
     loadStats();
   } catch(e) {
@@ -721,6 +759,9 @@ function renderCards() {
   if (activeTab === 'changed') {
     cards = cards.filter(c => c.price_change !== null && c.price_change !== 0);
   }
+  if (activeTab === 'favorites') {
+    cards = cards.filter(c => favorites.has(c.listing_id));
+  }
 
   const sort = document.getElementById('sort-by').value;
   cards.sort((a, b) => {
@@ -733,10 +774,11 @@ function renderCards() {
   });
 
   if (!cards.length) {
-    const msg = activeTab === 'fresh'
-      ? '🕐 אין דירות חדשות מהשעה האחרונה — לחץ "סרוק מפייסבוק" כדי לחפש'
-      : 'לא נמצאו דירות התואמות את הסינון';
-    panel.innerHTML = `<div class="no-results">${msg}</div>`;
+    const msgs = {
+      fresh:     '🕐 אין דירות חדשות מהשעה האחרונה — לחץ "סרוק מפייסבוק" כדי לחפש',
+      favorites: '❤️ עדיין אין מועדפים — לחץ על הלב בכרטיס כדי לשמור',
+    };
+    panel.innerHTML = `<div class="no-results">${msgs[activeTab] || 'לא נמצאו דירות התואמות את הסינון'}</div>`;
     return;
   }
 
@@ -756,11 +798,89 @@ function cleanPriceText(pt) {
 function isNew(firstSeen) {
   if (!firstSeen) return false;
   const t = new Date(firstSeen.replace(' ','T') + 'Z');
-  return (Date.now() - t.getTime()) < 60 * 60 * 1000; // < 1 hour
+  return (Date.now() - t.getTime()) < 60 * 60 * 1000;
+}
+
+// ── City averages ──────────────────────────────────────────
+function computeCityAverages(cards) {
+  const map = {};
+  for (const c of cards) {
+    if (c.city && c.price) {
+      if (!map[c.city]) map[c.city] = [];
+      map[c.city].push(c.price);
+    }
+  }
+  const avgs = {};
+  for (const [city, prices] of Object.entries(map)) {
+    if (prices.length >= 2)
+      avgs[city] = prices.reduce((a, b) => a + b, 0) / prices.length;
+  }
+  return avgs;
+}
+
+// ── Smart score 1–10 ───────────────────────────────────────
+function smartScore(c) {
+  let score = 5;
+  if (c.price && c.city && cityAverages[c.city]) {
+    const ratio = c.price / cityAverages[c.city];
+    if      (ratio < 0.70) score += 3;
+    else if (ratio < 0.85) score += 2;
+    else if (ratio < 0.95) score += 1;
+    else if (ratio > 1.20) score -= 2;
+    else if (ratio > 1.10) score -= 1;
+  }
+  if (c.broker === false) score += 1;
+  if (isNew(c.first_seen)) score += 1;
+  if (!c.price) score -= 2;
+  return Math.min(10, Math.max(1, Math.round(score)));
+}
+
+// ── Price analysis ─────────────────────────────────────────
+function priceAnalysis(c) {
+  if (!c.price || !c.city || !cityAverages[c.city]) return '';
+  const pct = Math.round((1 - c.price / cityAverages[c.city]) * 100);
+  if (Math.abs(pct) < 8) return '';
+  if (pct > 0) return `<span class="price-analysis price-cheap">↓ זול ב-${pct}% מממוצע ${esc(c.city)}</span>`;
+  return `<span class="price-analysis price-expensive">↑ יקר ב-${Math.abs(pct)}% מממוצע ${esc(c.city)}</span>`;
+}
+
+// ── Favorites ──────────────────────────────────────────────
+function toggleFavorite(id, ev) {
+  ev.stopPropagation();
+  if (favorites.has(id)) favorites.delete(id);
+  else favorites.add(id);
+  localStorage.setItem('apt_favorites', JSON.stringify([...favorites]));
+  // Update just the heart button without full re-render
+  const btn = document.querySelector(`#card-${CSS.escape(id)} .heart-btn`);
+  if (btn) btn.textContent = favorites.has(id) ? '❤️' : '🤍';
+  if (activeTab === 'favorites') renderCards();
+}
+
+// ── Export CSV ─────────────────────────────────────────────
+function exportCSV() {
+  if (!allCards.length) { alert('אין נתונים לייצוא'); return; }
+  const headers = ['כותרת','מחיר','מחיר טקסט','עיר','שכונה','חדרים','קומה','שטח מ"ר','סוג נכס','תיווך','להשכרה','ראשון נראה','קישור'];
+  const rows = allCards.map(c => [
+    c.title, c.price ?? '', c.price_text ?? '', c.city ?? '', c.neighborhood ?? '',
+    c.rooms ?? '', c.floor ?? '', c.size_sqm ?? '', c.property_type ?? '',
+    c.broker === true ? 'תיווך' : c.broker === false ? 'ישיר' : '',
+    c.for_rent === true ? 'השכרה' : c.for_rent === false ? 'מכירה' : '',
+    c.first_seen ?? '', c.url ?? ''
+  ].map(v => `"${String(v).replace(/"/g,'""')}"`));
+
+  const csv = '﻿' + [headers, ...rows].map(r => r.join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `דירות_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
 }
 
 function cardHTML(c) {
+  const score = smartScore(c);
+  const scoreCls = score >= 7 ? 'score-high' : score >= 5 ? 'score-medium' : 'score-low';
   const newBadge = isNew(c.first_seen) ? '<span class="badge-new">NEW</span>' : '';
+  const heartIcon = favorites.has(c.listing_id) ? '❤️' : '🤍';
   const priceStr = c.price ? fmtPrice(c.price) + ' ₪' : cleanPriceText(c.price_text);
   let changeHTML = '';
   if (c.price_change !== null && c.price_change !== 0) {
@@ -791,10 +911,13 @@ function cardHTML(c) {
   return `
   <div class="card" id="card-${esc(c.listing_id)}" onclick="toggleCard('${esc(c.listing_id)}',this)">
     <div class="card-top">
-      <span class="card-title">${newBadge}${esc(c.title || '–')}</span>
+      <span class="score-badge ${scoreCls}" title="ציון חכם">${score}</span>
+      <span class="card-title" style="flex:1">${newBadge}${esc(c.title || '–')}</span>
+      <button class="heart-btn" onclick="toggleFavorite('${esc(c.listing_id)}',event)" title="הוסף למועדפים">${heartIcon}</button>
       <span class="card-price">${priceStr} ${changeHTML}</span>
     </div>
     <div class="card-tags">${tagsHTML}</div>
+    ${priceAnalysis(c)}
     <div class="card-detail" id="detail-${esc(c.listing_id)}">
       <div>${esc(c.description || '')}</div>
       <a class="card-link" href="${esc(c.url)}" target="_blank" rel="noopener">פתח במרקטפלייס ↗</a>
