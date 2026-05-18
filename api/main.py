@@ -34,7 +34,7 @@ AUTO_SCRAPE_ENABLED = os.environ.get("AUTO_SCRAPE_ENABLED", "true").lower() == "
 
 
 async def _auto_scrape_loop() -> None:
-    """Background task: scrape FB + Yad2 every AUTO_SCRAPE_HOURS hours."""
+    """Background task: scrape FB every AUTO_SCRAPE_HOURS hours."""
     await asyncio.sleep(60)  # wait 1 min after startup before first run
     while True:
         print(f"[auto-scrape] starting scheduled scrape (every {AUTO_SCRAPE_HOURS}h)")
@@ -42,10 +42,6 @@ async def _auto_scrape_loop() -> None:
             await asyncio.to_thread(tools.scrape_apartments, query="דירה", max_results=40)
         except Exception as exc:
             print(f"[auto-scrape] FB error: {exc}")
-        try:
-            await asyncio.to_thread(tools.scrape_yad2_apartments, max_results=40)
-        except Exception as exc:
-            print(f"[auto-scrape] Yad2 error: {exc}")
         print(f"[auto-scrape] done — sleeping {AUTO_SCRAPE_HOURS}h")
         await asyncio.sleep(AUTO_SCRAPE_HOURS * 3600)
 
