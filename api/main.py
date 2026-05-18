@@ -30,7 +30,7 @@ import scraper as scraper_module
 # ---------------------------------------------------------------------------
 
 AUTO_SCRAPE_HOURS = int(os.environ.get("AUTO_SCRAPE_HOURS", "3"))
-AUTO_SCRAPE_ENABLED = os.environ.get("AUTO_SCRAPE_ENABLED", "true").lower() == "true"
+AUTO_SCRAPE_ENABLED = os.environ.get("AUTO_SCRAPE_ENABLED", "false").lower() == "true"
 
 
 async def _auto_scrape_loop() -> None:
