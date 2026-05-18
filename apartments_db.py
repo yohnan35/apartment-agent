@@ -35,6 +35,9 @@ CREATE TABLE IF NOT EXISTS apartments (
     size_sqm        REAL,
     property_type   TEXT,
     for_rent        INTEGER,   -- 1=rent 0=sale NULL=unknown
+    score           REAL,      -- AI score 1-10
+    score_reason    TEXT,      -- Hebrew explanation
+    is_broker_suspect INTEGER, -- 1=suspect 0=not NULL=unknown
     first_seen      TEXT NOT NULL,
     last_updated    TEXT NOT NULL
 );
@@ -77,6 +80,18 @@ def _conn() -> Generator[sqlite3.Connection, None, None]:
 def init_db() -> None:
     with _conn() as con:
         con.executescript(SCHEMA)
+        # Migrate: add score columns if they don't exist yet (safe for existing DBs)
+        for col_def in [
+            ("score",             "REAL"),
+            ("score_reason",      "TEXT"),
+            ("is_broker_suspect", "INTEGER"),
+        ]:
+            try:
+                con.execute(f"ALTER TABLE apartments ADD COLUMN {col_def[0]} {col_def[1]}")
+                con.commit()
+            except sqlite3.OperationalError:
+                # Column already exists — that's fine
+                pass
 
 
 # ---------------------------------------------------------------------------
@@ -118,6 +133,9 @@ def upsert_apartment(listing: dict, extracted: dict) -> None:
             "size_sqm": extracted.get("size_sqm"),
             "property_type": extracted.get("property_type"),
             "for_rent": _bool(extracted.get("for_rent")),
+            "score": extracted.get("score"),
+            "score_reason": extracted.get("score_reason"),
+            "is_broker_suspect": _bool(extracted.get("is_broker_suspect")),
             "last_updated": now,
         }
 

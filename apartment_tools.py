@@ -7,6 +7,7 @@ from typing import Any, Optional
 import apartments_db as db
 import extractor
 import scraper
+import scoring
 import yad2_scraper
 
 
@@ -18,9 +19,22 @@ def scrape_apartments(query: str = "דירה", max_results: int = 40) -> dict[st
 
     extracted_list = extractor.bulk_extract(listings)
 
+    # Score all listings in one API call
+    try:
+        score_list = scoring.bulk_score(listings, extracted_list)
+    except Exception as exc:
+        print(f"[scoring error] {exc}")
+        score_list = [{"score": None, "score_reason": None, "is_broker_suspect": None}] * len(listings)
+
+    # Merge scores into extracted dicts
+    merged_list = []
+    for extracted, score_data in zip(extracted_list, score_list):
+        merged = {**extracted, **(score_data or {})}
+        merged_list.append(merged)
+
     stored = 0
     failed = 0
-    for listing, extracted in zip(listings, extracted_list):
+    for listing, extracted in zip(listings, merged_list):
         try:
             db.upsert_apartment(listing, extracted)
             stored += 1
@@ -58,10 +72,25 @@ def scrape_yad2_apartments(
     if not listings:
         return {"scraped": 0, "stored": 0, "message": "לא נמצאו תוצאות ביד2"}
 
+    # Separate listings from their pre-extracted data
+    extracted_list = [listing.pop("_extracted", {}) for listing in listings]
+
+    # Score all yad2 listings in one API call
+    try:
+        score_list = scoring.bulk_score(listings, extracted_list)
+    except Exception as exc:
+        print(f"[yad2 scoring error] {exc}")
+        score_list = [{"score": None, "score_reason": None, "is_broker_suspect": None}] * len(listings)
+
+    # Merge scores into extracted dicts
+    merged_list = [
+        {**extracted, **(score_data or {})}
+        for extracted, score_data in zip(extracted_list, score_list)
+    ]
+
     stored = 0
     failed = 0
-    for listing in listings:
-        extracted = listing.pop("_extracted", {})
+    for listing, extracted in zip(listings, merged_list):
         try:
             db.upsert_apartment(listing, extracted)
             stored += 1

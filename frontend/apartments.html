@@ -300,6 +300,21 @@
   /* Price per sqm */
   .tag.sqm { border-color: #a78bfa; color: #a78bfa; }
 
+  /* AI score reason */
+  .score-reason {
+    margin-top: 8px; padding: 8px 10px;
+    background: var(--bg3); border-radius: 6px;
+    font-size: 0.8rem; color: var(--text-muted);
+    border-right: 3px solid var(--accent);
+    line-height: 1.5;
+  }
+
+  /* Broker suspect warning badge */
+  .tag.broker-suspect {
+    border-color: var(--red); color: var(--red);
+    animation: pulse-new 2s ease-in-out infinite;
+  }
+
   /* Scrollbar */
   ::-webkit-scrollbar { width: 5px; }
   ::-webkit-scrollbar-track { background: transparent; }
@@ -1064,8 +1079,10 @@ function exportCSV() {
 }
 
 function cardHTML(c) {
-  const score = smartScore(c);
+  // Use server-side AI score if available, otherwise fall back to client-side smartScore
+  const score = (c.score != null) ? Math.round(c.score) : smartScore(c);
   const scoreCls = score >= 7 ? 'score-high' : score >= 5 ? 'score-medium' : 'score-low';
+  const scoreTitle = c.score != null ? `ציון AI: ${c.score.toFixed(1)}` : 'ציון חכם';
   const newBadge = isNew(c.first_seen) ? '<span class="badge-new">NEW</span>' : '';
   const heartIcon = favorites.has(c.listing_id) ? '❤️' : '🤍';
   const priceStr = c.price ? fmtPrice(c.price) + ' ₪' : cleanPriceText(c.price_text);
@@ -1105,12 +1122,20 @@ function cardHTML(c) {
     ? `<span class="tag sqm">${fmtPrice(pricePerSqm)} ₪/מ"ר</span>`
     : '';
 
-  const tagsHTML = tags.map(t => `<span class="tag">${esc(t)}</span>`).join('') + brokerTag + txTag + srcTag + sqmTag;
+  const brokerSuspectTag = c.is_broker_suspect
+    ? '<span class="tag broker-suspect">⚠ חשד תיווך</span>'
+    : '';
+
+  const tagsHTML = tags.map(t => `<span class="tag">${esc(t)}</span>`).join('') + brokerTag + txTag + srcTag + sqmTag + brokerSuspectTag;
+
+  const scoreReasonHTML = c.score_reason
+    ? `<div class="score-reason">💬 ${esc(c.score_reason)}</div>`
+    : '';
 
   return `
   <div class="card" id="card-${esc(c.listing_id)}" onclick="toggleCard('${esc(c.listing_id)}',this)">
     <div class="card-top">
-      <span class="score-badge ${scoreCls}" title="ציון חכם">${score}</span>
+      <span class="score-badge ${scoreCls}" title="${esc(scoreTitle)}">${score}</span>
       <span class="card-title" style="flex:1">${newBadge}${esc(c.title || '–')}</span>
       <button class="heart-btn" onclick="toggleFavorite('${esc(c.listing_id)}',event)" title="הוסף למועדפים">${heartIcon}</button>
       <span class="card-price">${priceStr} ${changeHTML}</span>
@@ -1118,6 +1143,7 @@ function cardHTML(c) {
     <div class="card-tags">${tagsHTML}</div>
     ${priceAnalysis(c)}
     <div class="card-detail" id="detail-${esc(c.listing_id)}">
+      ${scoreReasonHTML}
       <div>${esc(c.description || '')}</div>
       <a class="card-link" href="${esc(c.url)}" target="_blank" rel="noopener">פתח במרקטפלייס ↗</a>
       <div class="history-title">היסטוריית מחירים</div>
