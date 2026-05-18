@@ -6,6 +6,7 @@ import asyncio
 import json
 import os
 import sys
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, AsyncGenerator, Optional
 
@@ -24,7 +25,44 @@ import apartment_tools as tools
 import apartments_db as db
 import scraper as scraper_module
 
-app = FastAPI(title="FB Marketplace Apartment Agent")
+# ---------------------------------------------------------------------------
+# Auto-scrape background task
+# ---------------------------------------------------------------------------
+
+AUTO_SCRAPE_HOURS = int(os.environ.get("AUTO_SCRAPE_HOURS", "3"))
+AUTO_SCRAPE_ENABLED = os.environ.get("AUTO_SCRAPE_ENABLED", "true").lower() == "true"
+
+
+async def _auto_scrape_loop() -> None:
+    """Background task: scrape FB + Yad2 every AUTO_SCRAPE_HOURS hours."""
+    await asyncio.sleep(60)  # wait 1 min after startup before first run
+    while True:
+        print(f"[auto-scrape] starting scheduled scrape (every {AUTO_SCRAPE_HOURS}h)")
+        try:
+            await asyncio.to_thread(tools.scrape_apartments, query="דירה", max_results=40)
+        except Exception as exc:
+            print(f"[auto-scrape] FB error: {exc}")
+        try:
+            await asyncio.to_thread(tools.scrape_yad2_apartments, max_results=40)
+        except Exception as exc:
+            print(f"[auto-scrape] Yad2 error: {exc}")
+        print(f"[auto-scrape] done — sleeping {AUTO_SCRAPE_HOURS}h")
+        await asyncio.sleep(AUTO_SCRAPE_HOURS * 3600)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    if AUTO_SCRAPE_ENABLED:
+        task = asyncio.create_task(_auto_scrape_loop())
+        print(f"[auto-scrape] enabled — interval: {AUTO_SCRAPE_HOURS}h")
+    else:
+        task = None
+    yield
+    if task:
+        task.cancel()
+
+
+app = FastAPI(title="FB Marketplace Apartment Agent", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -258,6 +296,16 @@ def delete_all_apartments():
 @app.get("/apartments/stats")
 def apartment_stats():
     return db.get_apartment_stats()
+
+
+@app.get("/apartments/city-stats")
+def city_stats():
+    return db.get_city_stats()
+
+
+@app.get("/apartments/price-trends")
+def price_trends():
+    return db.get_price_trends()
 
 
 @app.get("/apartments/history/{listing_id}")

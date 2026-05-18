@@ -258,6 +258,58 @@ def get_price_history(listing_id: str) -> list[dict]:
     return [dict(r) for r in rows]
 
 
+def get_city_stats() -> list[dict]:
+    """Average price, count and avg price/sqm per city — for market chart."""
+    with _conn() as con:
+        rows = con.execute("""
+            SELECT
+                city,
+                COUNT(*)          AS count,
+                AVG(price)        AS avg_price,
+                AVG(size_sqm)     AS avg_sqm,
+                AVG(CASE WHEN price IS NOT NULL AND size_sqm > 0
+                         THEN CAST(price AS REAL)/size_sqm END) AS avg_price_sqm
+            FROM apartments
+            WHERE city IS NOT NULL AND price IS NOT NULL
+              AND (price_text IS NULL OR price_text = ''
+                   OR (price_text NOT LIKE '%$%' AND price_text NOT LIKE '%USD%'))
+            GROUP BY city
+            HAVING count >= 2
+            ORDER BY count DESC
+            LIMIT 20
+        """).fetchall()
+    return [
+        {
+            "city": r["city"],
+            "count": r["count"],
+            "avg_price": round(r["avg_price"]) if r["avg_price"] else None,
+            "avg_sqm": round(r["avg_sqm"], 1) if r["avg_sqm"] else None,
+            "avg_price_sqm": round(r["avg_price_sqm"]) if r["avg_price_sqm"] else None,
+        }
+        for r in rows
+    ]
+
+
+def get_price_trends() -> list[dict]:
+    """Monthly average price — for trend line chart."""
+    with _conn() as con:
+        rows = con.execute("""
+            SELECT
+                strftime('%Y-%m', first_seen) AS month,
+                AVG(price)                    AS avg_price,
+                COUNT(*)                      AS count
+            FROM apartments
+            WHERE price IS NOT NULL AND first_seen IS NOT NULL
+            GROUP BY month
+            ORDER BY month ASC
+            LIMIT 24
+        """).fetchall()
+    return [
+        {"month": r["month"], "avg_price": round(r["avg_price"]), "count": r["count"]}
+        for r in rows
+    ]
+
+
 def get_apartment_stats() -> dict:
     with _conn() as con:
         row = con.execute("""

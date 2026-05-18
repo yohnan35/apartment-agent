@@ -2,6 +2,7 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>סוכן דירות - פייסבוק מרקטפלייס</title>
 <style>
@@ -283,6 +284,22 @@
   .tag.src-fb   { border-color: #1877f2; color: #1877f2; }
   .tag.src-yad2 { border-color: #ff6b35; color: #ff6b35; }
 
+  /* Market panel */
+  .market-panel {
+    flex: 1; overflow-y: auto; padding: 20px;
+    display: none; flex-direction: column; gap: 24px;
+  }
+  .market-panel.visible { display: flex; }
+  .chart-card {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 18px;
+  }
+  .chart-card h3 { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 14px; }
+  .chart-wrap { position: relative; height: 260px; }
+
+  /* Price per sqm */
+  .tag.sqm { border-color: #a78bfa; color: #a78bfa; }
+
   /* Scrollbar */
   ::-webkit-scrollbar { width: 5px; }
   ::-webkit-scrollbar-track { background: transparent; }
@@ -381,6 +398,7 @@
     <button class="tab-btn fresh-tab" onclick="setTab('fresh',this)">🆕 טרי</button>
     <button class="tab-btn" onclick="setTab('changed',this)">שינויי מחיר</button>
     <button class="tab-btn" onclick="setTab('favorites',this)">❤️ מועדפים</button>
+    <button class="tab-btn" onclick="setTab('market',this)">📊 שוק</button>
   </div>
   <div class="refresh-indicator" id="refresh-indicator" style="display:none">
     <div class="refresh-dot"></div><span id="refresh-countdown"></span>
@@ -397,6 +415,22 @@
   <!-- Results -->
   <div class="results-panel" id="results">
     <div class="no-results">לחץ "חפש" כדי לטעון דירות</div>
+  </div>
+
+  <!-- Market panel -->
+  <div class="market-panel" id="market-panel">
+    <div class="chart-card">
+      <h3>💰 ממוצע מחיר לפי עיר</h3>
+      <div class="chart-wrap"><canvas id="chart-city"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>📐 ממוצע מחיר למ"ר לפי עיר</h3>
+      <div class="chart-wrap"><canvas id="chart-sqm"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>📈 מגמת מחירים לאורך זמן</h3>
+      <div class="chart-wrap"><canvas id="chart-trend"></canvas></div>
+    </div>
   </div>
 
   <!-- Sidebar (on the left in RTL = right side visually) -->
@@ -622,16 +656,124 @@ async function loadStats() {
 }
 
 // ── Tabs ──────────────────────────────────────────────────
+let chartInstances = {};
+
 function setTab(tab, el) {
   activeTab = tab;
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   el.classList.add('active');
-  if (tab === 'fresh') {
-    startAutoRefresh();
-  } else {
-    stopAutoRefresh();
+
+  const isMarket = tab === 'market';
+  document.getElementById('results').style.display      = isMarket ? 'none' : '';
+  document.getElementById('market-panel').classList.toggle('visible', isMarket);
+
+  if (tab === 'fresh') startAutoRefresh();
+  else stopAutoRefresh();
+
+  if (isMarket) loadMarketCharts();
+  else renderCards();
+}
+
+// ── Market charts ─────────────────────────────────────────
+async function loadMarketCharts() {
+  try {
+    const [cityData, trendData] = await Promise.all([
+      fetch(API + '/apartments/city-stats').then(r => r.json()),
+      fetch(API + '/apartments/price-trends').then(r => r.json()),
+    ]);
+    renderCityChart(cityData);
+    renderSqmChart(cityData);
+    renderTrendChart(trendData);
+  } catch(e) {
+    console.error('chart load error', e);
   }
-  renderCards();
+}
+
+function mkChart(id, config) {
+  if (chartInstances[id]) chartInstances[id].destroy();
+  chartInstances[id] = new Chart(document.getElementById(id), config);
+}
+
+function renderCityChart(data) {
+  const cities = data.filter(d => d.avg_price).slice(0, 12);
+  mkChart('chart-city', {
+    type: 'bar',
+    data: {
+      labels: cities.map(d => d.city),
+      datasets: [{
+        label: 'ממוצע מחיר ₪',
+        data: cities.map(d => d.avg_price),
+        backgroundColor: '#6c63ff99',
+        borderColor: '#6c63ff',
+        borderWidth: 1,
+        borderRadius: 4,
+      }]
+    },
+    options: chartOpts('₪', cities.map(d => d.count)),
+  });
+}
+
+function renderSqmChart(data) {
+  const cities = data.filter(d => d.avg_price_sqm).slice(0, 12);
+  mkChart('chart-sqm', {
+    type: 'bar',
+    data: {
+      labels: cities.map(d => d.city),
+      datasets: [{
+        label: '₪ למ"ר',
+        data: cities.map(d => d.avg_price_sqm),
+        backgroundColor: '#a78bfa99',
+        borderColor: '#a78bfa',
+        borderWidth: 1,
+        borderRadius: 4,
+      }]
+    },
+    options: chartOpts('₪/מ"ר'),
+  });
+}
+
+function renderTrendChart(data) {
+  mkChart('chart-trend', {
+    type: 'line',
+    data: {
+      labels: data.map(d => d.month),
+      datasets: [{
+        label: 'ממוצע מחיר חודשי ₪',
+        data: data.map(d => d.avg_price),
+        borderColor: '#4ecca3',
+        backgroundColor: '#4ecca320',
+        fill: true,
+        tension: 0.3,
+        pointRadius: 4,
+        pointBackgroundColor: '#4ecca3',
+      }]
+    },
+    options: chartOpts('₪'),
+  });
+}
+
+function chartOpts(unit, counts) {
+  return {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: ctx => {
+            let s = `${fmtPrice(ctx.parsed.y)} ${unit}`;
+            if (counts) s += ` (${counts[ctx.dataIndex]} דירות)`;
+            return s;
+          }
+        }
+      }
+    },
+    scales: {
+      x: { ticks: { color: '#7c85a2', font: { size: 11 } }, grid: { color: '#2e3248' } },
+      y: { ticks: { color: '#7c85a2', font: { size: 11 },
+                    callback: v => fmtPrice(v) + ' ' + unit },
+           grid: { color: '#2e3248' } },
+    },
+  };
 }
 
 // ── Auto-refresh (fresh tab) ──────────────────────────────
@@ -943,6 +1085,9 @@ function cardHTML(c) {
   if (c.size_sqm)       tags.push(`${c.size_sqm} מ"ר`);
   if (c.property_type)  tags.push(c.property_type);
 
+  const pricePerSqm = (c.price && c.size_sqm && c.size_sqm > 0)
+    ? Math.round(c.price / c.size_sqm) : null;
+
   let brokerTag = '';
   if (c.broker === true)  brokerTag = '<span class="tag broker">תיווך</span>';
   if (c.broker === false) brokerTag = '<span class="tag direct">ישיר</span>';
@@ -956,7 +1101,11 @@ function cardHTML(c) {
     ? '<span class="tag src-yad2">יד2</span>'
     : '<span class="tag src-fb">FB</span>';
 
-  const tagsHTML = tags.map(t => `<span class="tag">${esc(t)}</span>`).join('') + brokerTag + txTag + srcTag;
+  const sqmTag = pricePerSqm
+    ? `<span class="tag sqm">${fmtPrice(pricePerSqm)} ₪/מ"ר</span>`
+    : '';
+
+  const tagsHTML = tags.map(t => `<span class="tag">${esc(t)}</span>`).join('') + brokerTag + txTag + srcTag + sqmTag;
 
   return `
   <div class="card" id="card-${esc(c.listing_id)}" onclick="toggleCard('${esc(c.listing_id)}',this)">
