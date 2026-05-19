@@ -39,6 +39,8 @@ CREATE TABLE IF NOT EXISTS apartments (
     score_reason    TEXT,      -- Hebrew explanation
     is_broker_suspect INTEGER, -- 1=suspect 0=not NULL=unknown
     entry_date      TEXT,      -- תאריך כניסה (free text, e.g. "מיידי", "01/06/2025")
+    phone           TEXT,      -- מספר טלפון של המפרסם
+    photo_url       TEXT,      -- URL of first listing photo (from scraper)
     first_seen      TEXT NOT NULL,
     last_updated    TEXT NOT NULL
 );
@@ -87,6 +89,8 @@ def init_db() -> None:
             ("score_reason",      "TEXT"),
             ("is_broker_suspect", "INTEGER"),
             ("entry_date",        "TEXT"),
+            ("phone",             "TEXT"),
+            ("photo_url",         "TEXT"),
         ]:
             try:
                 con.execute(f"ALTER TABLE apartments ADD COLUMN {col_def[0]} {col_def[1]}")
@@ -139,6 +143,8 @@ def upsert_apartment(listing: dict, extracted: dict) -> None:
             "score_reason": extracted.get("score_reason"),
             "is_broker_suspect": _bool(extracted.get("is_broker_suspect")),
             "entry_date": extracted.get("entry_date"),
+            "phone": extracted.get("phone"),
+            "photo_url": listing.get("photo_url"),
             "last_updated": now,
         }
 

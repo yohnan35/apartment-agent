@@ -252,6 +252,16 @@ async def _extract_card_data(card, url: str) -> Optional[dict]:
 
     listing_id = _extract_id(url)
 
+    # Photo URL — grab first img src inside the card
+    photo_url = None
+    try:
+        img_el = card.locator("img").first
+        src = await img_el.get_attribute("src", timeout=1500)
+        if src and src.startswith("http") and ("fbcdn" in src or "scontent" in src):
+            photo_url = src
+    except Exception:
+        pass
+
     return {
         "listing_id": listing_id,
         "url": url,
@@ -260,6 +270,7 @@ async def _extract_card_data(card, url: str) -> Optional[dict]:
         "price_text": price_text,
         "location": location,
         "description": description,
+        "photo_url": photo_url,
     }
 
 
