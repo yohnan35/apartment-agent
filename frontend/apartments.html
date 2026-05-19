@@ -284,6 +284,9 @@
   .tag.src-fb   { border-color: #1877f2; color: #1877f2; }
   .tag.src-yad2 { border-color: #ff6b35; color: #ff6b35; }
 
+  /* Entry date tag */
+  .tag.entry-date { border-color: #ffd166; color: #ffd166; }
+
   /* Market panel */
   .market-panel {
     flex: 1; overflow-y: auto; padding: 20px;
@@ -1098,7 +1101,7 @@ function cardHTML(c) {
   if (c.rooms)          tags.push(formatRooms(c.rooms));
   if (c.city)           tags.push(c.city);
   if (c.neighborhood)   tags.push(c.neighborhood);
-  if (c.floor != null)  tags.push(`קומה ${c.floor}`);
+  if (c.floor != null)  tags.push(c.floor === 0 ? 'קרקע' : `קומה ${c.floor}`);
   if (c.size_sqm)       tags.push(`${c.size_sqm} מ"ר`);
   if (c.property_type)  tags.push(c.property_type);
 
@@ -1126,7 +1129,10 @@ function cardHTML(c) {
     ? '<span class="tag broker-suspect">⚠ חשד תיווך</span>'
     : '';
 
-  const tagsHTML = tags.map(t => `<span class="tag">${esc(t)}</span>`).join('') + brokerTag + txTag + srcTag + sqmTag + brokerSuspectTag;
+  const entryDateTag = c.entry_date
+    ? `<span class="tag entry-date">📅 ${esc(c.entry_date)}</span>`
+    : '';
+  const tagsHTML = tags.map(t => `<span class="tag">${esc(t)}</span>`).join('') + brokerTag + txTag + srcTag + sqmTag + brokerSuspectTag + entryDateTag;
 
   const scoreReasonHTML = c.score_reason
     ? `<div class="score-reason">💬 ${esc(c.score_reason)}</div>`
@@ -1144,6 +1150,14 @@ function cardHTML(c) {
     ${priceAnalysis(c)}
     <div class="card-detail" id="detail-${esc(c.listing_id)}">
       ${scoreReasonHTML}
+      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:8px;font-size:0.82rem;color:var(--text-muted)">
+        ${c.price    ? `<span>💰 <b style="color:var(--accent2)">${c.price ? fmtPrice(c.price)+' ₪' : ''}</b></span>` : ''}
+        ${c.city     ? `<span>📍 <b>${esc(c.city)}${c.neighborhood ? ' — '+esc(c.neighborhood) : ''}</b></span>` : ''}
+        ${c.rooms    ? `<span>🛏 <b>${formatRooms(c.rooms)}</b></span>` : ''}
+        ${c.floor != null ? `<span>🏢 <b>${c.floor === 0 ? 'קרקע' : 'קומה '+c.floor}${c.total_floors ? '/'+c.total_floors : ''}</b></span>` : ''}
+        ${c.size_sqm ? `<span>📐 <b>${c.size_sqm} מ"ר</b></span>` : ''}
+        ${c.entry_date ? `<span>📅 כניסה: <b style="color:var(--yellow)">${esc(c.entry_date)}</b></span>` : ''}
+      </div>
       <div>${esc(c.description || '')}</div>
       <a class="card-link" href="${esc(c.url)}" target="_blank" rel="noopener">פתח במרקטפלייס ↗</a>
       <div class="history-title">היסטוריית מחירים</div>

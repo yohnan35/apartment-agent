@@ -25,12 +25,13 @@ SYSTEM_PROMPT = """אתה מחלץ מידע מובנה ממודעות דירות
 - rooms: מספר חדרים (float, null אם לא ידוע)
 - city: שם עיר בעברית (string, null) — לדוגמה: "תל אביב", "ירושלים", "חיפה"
 - neighborhood: שכונה בעברית (string, null)
-- floor: קומה (int, null)
+- floor: קומה (int, null) — קרקע = 0
 - total_floors: סה"כ קומות בבניין (int, null)
 - broker: האם תיווך? (true=תיווך, false=ישיר, null=לא ברור)
 - size_sqm: שטח במ"ר (float, null)
 - property_type: סוג הנכס (string כמו "דירה","קוטג'","דופלקס","פנטהאוז","סטודיו", null)
 - for_rent: להשכרה=true, למכירה=false (null אם לא ברור)
+- entry_date: תאריך כניסה / זמינות (string, null) — לדוגמה: "מיידי", "01/06/2025", "אפריל 2025", "גמיש". אם לא מוזכר — null.
 """
 
 

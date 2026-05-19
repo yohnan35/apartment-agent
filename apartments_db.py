@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS apartments (
     score           REAL,      -- AI score 1-10
     score_reason    TEXT,      -- Hebrew explanation
     is_broker_suspect INTEGER, -- 1=suspect 0=not NULL=unknown
+    entry_date      TEXT,      -- תאריך כניסה (free text, e.g. "מיידי", "01/06/2025")
     first_seen      TEXT NOT NULL,
     last_updated    TEXT NOT NULL
 );
@@ -80,11 +81,12 @@ def _conn() -> Generator[sqlite3.Connection, None, None]:
 def init_db() -> None:
     with _conn() as con:
         con.executescript(SCHEMA)
-        # Migrate: add score columns if they don't exist yet (safe for existing DBs)
+        # Migrate: add columns if they don't exist yet (safe for existing DBs)
         for col_def in [
             ("score",             "REAL"),
             ("score_reason",      "TEXT"),
             ("is_broker_suspect", "INTEGER"),
+            ("entry_date",        "TEXT"),
         ]:
             try:
                 con.execute(f"ALTER TABLE apartments ADD COLUMN {col_def[0]} {col_def[1]}")
@@ -136,6 +138,7 @@ def upsert_apartment(listing: dict, extracted: dict) -> None:
             "score": extracted.get("score"),
             "score_reason": extracted.get("score_reason"),
             "is_broker_suspect": _bool(extracted.get("is_broker_suspect")),
+            "entry_date": extracted.get("entry_date"),
             "last_updated": now,
         }
 
