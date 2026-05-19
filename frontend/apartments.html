@@ -90,7 +90,7 @@
   aside {
     width: 280px; min-width: 240px;
     background: var(--bg2);
-    border-left: 1px solid var(--border);
+    border-left: 1px solid var(--border);  /* גבול בין aside (ימין) לתוכן (שמאל) */
     padding: 16px;
     overflow-y: auto;
     display: flex; flex-direction: column; gap: 14px;
@@ -474,33 +474,7 @@
 <!-- ── Main ────────────────────────────────────────────── -->
 <div class="main">
 
-  <!-- Results -->
-  <div class="results-panel" id="results">
-    <div class="no-results">לחץ "חפש" כדי לטעון דירות</div>
-  </div>
-
-  <!-- Map panel -->
-  <div class="map-panel" id="map-panel">
-    <div id="map-container"></div>
-  </div>
-
-  <!-- Market panel -->
-  <div class="market-panel" id="market-panel">
-    <div class="chart-card">
-      <h3>💰 ממוצע מחיר לפי עיר</h3>
-      <div class="chart-wrap"><canvas id="chart-city"></canvas></div>
-    </div>
-    <div class="chart-card">
-      <h3>📐 ממוצע מחיר למ"ר לפי עיר</h3>
-      <div class="chart-wrap"><canvas id="chart-sqm"></canvas></div>
-    </div>
-    <div class="chart-card">
-      <h3>📈 מגמת מחירים לאורך זמן</h3>
-      <div class="chart-wrap"><canvas id="chart-trend"></canvas></div>
-    </div>
-  </div>
-
-  <!-- Sidebar (on the left in RTL = right side visually) -->
+  <!-- Sidebar — first in DOM = right side in RTL flex -->
   <aside>
     <h2>סינון</h2>
 
@@ -607,6 +581,33 @@
     <button class="btn-delete" onclick="doClear()">🗑 מחק את כל התוצאות</button>
     <button class="btn-export" onclick="exportCSV()">📤 ייצוא ל-Excel</button>
   </aside>
+
+  <!-- Results — after aside = left side in RTL flex -->
+  <div class="results-panel" id="results">
+    <div class="no-results">לחץ "חפש" כדי לטעון דירות</div>
+  </div>
+
+  <!-- Map panel -->
+  <div class="map-panel" id="map-panel">
+    <div id="map-container"></div>
+  </div>
+
+  <!-- Market panel -->
+  <div class="market-panel" id="market-panel">
+    <div class="chart-card">
+      <h3>💰 ממוצע מחיר לפי עיר</h3>
+      <div class="chart-wrap"><canvas id="chart-city"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>📐 ממוצע מחיר למ"ר לפי עיר</h3>
+      <div class="chart-wrap"><canvas id="chart-sqm"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>📈 מגמת מחירים לאורך זמן</h3>
+      <div class="chart-wrap"><canvas id="chart-trend"></canvas></div>
+    </div>
+  </div>
+
 </div>
 
 <!-- ── Chat ──────────────────────────────────────────────── -->
