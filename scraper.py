@@ -5,6 +5,7 @@ Run `python scraper.py --login` once to save cookies to fb_session.json.
 import asyncio
 import json
 import os
+import random
 import re
 import sys
 from pathlib import Path
@@ -156,8 +157,8 @@ async def _scrape_page(page: Page, query: str, max_results: int) -> list[dict]:
     if "/login" in page.url or await page.locator('input[name="email"]').count() > 0:
         raise RuntimeError("פייסבוק דורש התחברות — יש לייצא Cookies מחדש מהדפדפן")
 
-    # Small human-like delay after page load
-    await asyncio.sleep(1.2)
+    # Human-like delay after page load (2–4 seconds)
+    await asyncio.sleep(random.uniform(2.0, 4.0))
 
     # Dismiss cookie/login dialogs if present
     for selector in [
@@ -168,6 +169,7 @@ async def _scrape_page(page: Page, query: str, max_results: int) -> list[dict]:
             btn = page.locator(selector).first
             if await btn.is_visible(timeout=2000):
                 await btn.click()
+                await asyncio.sleep(random.uniform(0.5, 1.2))
         except Exception:
             pass
 
@@ -195,6 +197,8 @@ async def _scrape_page(page: Page, query: str, max_results: int) -> list[dict]:
                 listing = await _extract_card_data(card, url)
                 if listing:
                     listings.append(listing)
+                    # Random pause between cards (human reads each listing)
+                    await asyncio.sleep(random.uniform(0.3, 0.9))
             except Exception:
                 continue
 
@@ -203,8 +207,15 @@ async def _scrape_page(page: Page, query: str, max_results: int) -> list[dict]:
             print("[scraper] session expired mid-scrape — returning partial results")
             break
 
-        await page.evaluate("window.scrollBy(0, window.innerHeight * 3)")
-        await asyncio.sleep(1.5)
+        # Human-like scroll: 2–3 small scrolls with pauses in between
+        num_scrolls = random.randint(2, 3)
+        for _ in range(num_scrolls):
+            scroll_px = random.randint(400, 900)
+            await page.evaluate(f"window.scrollBy(0, {scroll_px})")
+            await asyncio.sleep(random.uniform(0.4, 0.9))
+
+        # Pause between scroll rounds (human reads content)
+        await asyncio.sleep(random.uniform(1.5, 3.0))
         scroll_attempts += 1
 
     return listings
