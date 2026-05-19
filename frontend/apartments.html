@@ -914,9 +914,8 @@ async function doFilter() {
   if (toggleState.direct === true) params.set('broker', 'false');
   if (toggleState.broker === true) params.set('broker', 'true');
 
-  // for_rent
-  if (toggleState.rent === true) params.set('for_rent', 'true');
-  if (toggleState.sale === true) params.set('for_rent', 'false');
+  // Note: for_rent filter intentionally removed — most FB listings have for_rent=NULL
+  // The scraper targets propertyforsale category on FB directly
 
   if (activeTab === 'fresh') params.set('hours_fresh', '1');
 
