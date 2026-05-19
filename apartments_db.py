@@ -223,8 +223,12 @@ def get_apartments(
         conditions.append("floor = ?")
         params.append(floor)
     if for_rent is not None:
-        conditions.append("for_rent = ?")
-        params.append(1 if for_rent else 0)
+        if for_rent:
+            # להשכרה: רק מה שבטוח להשכרה
+            conditions.append("for_rent = 1")
+        else:
+            # למכירה: כולל "לא ידוע" (NULL) — מוציא רק מה שבטוח להשכרה
+            conditions.append("(for_rent = 0 OR for_rent IS NULL)")
     if hours_fresh is not None:
         conditions.append("first_seen >= datetime('now', ?)")
         params.append(f"-{hours_fresh} hours")

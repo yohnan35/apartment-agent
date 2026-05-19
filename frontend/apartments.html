@@ -914,8 +914,9 @@ async function doFilter() {
   if (toggleState.direct === true) params.set('broker', 'false');
   if (toggleState.broker === true) params.set('broker', 'true');
 
-  // Note: for_rent filter intentionally removed — most FB listings have for_rent=NULL
-  // The scraper targets propertyforsale category on FB directly
+  // for_rent filter — "למכירה" כולל גם NULL (לא ידוע), מוציא רק בטוח להשכרה
+  if (toggleState.sale === true) params.set('for_rent', 'false');
+  if (toggleState.rent === true) params.set('for_rent', 'true');
 
   if (activeTab === 'fresh') params.set('hours_fresh', '1');
 
