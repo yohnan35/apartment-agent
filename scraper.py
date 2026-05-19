@@ -128,7 +128,7 @@ async def _scrape_page(page: Page, query: str, max_results: int) -> list[dict]:
     search_url = (
         f"{MARKETPLACE_BASE}/search/"
         f"?query={quote(query)}"
-        f"&category_id=propertyforsale"
+        f"&category_id=propertyrentals"
     )
 
     await page.goto(search_url, wait_until="domcontentloaded", timeout=30_000)
