@@ -374,7 +374,8 @@ def health():
 
 @app.get("/debug/scraper")
 async def debug_scraper():
-    """Debug: load FB Marketplace and return page URL, title, card count."""
+    """Debug: load FB Marketplace and return page URL, title, card count.
+    Tries without session first (public access), then with session."""
     from playwright.async_api import async_playwright
     from urllib.parse import quote
     result = {}
@@ -385,10 +386,25 @@ async def debug_scraper():
                 args=["--no-sandbox","--disable-setuid-sandbox","--disable-dev-shm-usage",
                       "--disable-blink-features=AutomationControlled"],
             )
-            ctx = await scraper_module._load_session(browser)
-            page = await ctx.new_page()
+            # Try WITHOUT session first
+            ctx_no_session = await browser.new_context(**scraper_module._CONTEXT_OPTIONS)
+            await ctx_no_session.add_init_script(scraper_module._STEALTH_SCRIPT)
+            page_no_session = await ctx_no_session.new_page()
             url = (f"https://www.facebook.com/marketplace/112308178781459/search/"
                    f"?query={quote('דירה')}&category_id=propertyrentals")
+            await page_no_session.goto(url, wait_until="domcontentloaded", timeout=30_000)
+            await asyncio.sleep(4)
+            await page_no_session.evaluate("window.scrollBy(0, 600)")
+            await asyncio.sleep(2)
+            result["no_session_url"] = page_no_session.url
+            result["no_session_login"] = "/login" in page_no_session.url
+            cards_no = await page_no_session.locator('a[href*="/marketplace/item/"]').all()
+            result["no_session_cards"] = len(cards_no)
+            await ctx_no_session.close()
+
+            # Also try WITH session (if exists)
+            ctx = await scraper_module._load_session(browser)
+            page = await ctx.new_page()
             await page.goto(url, wait_until="domcontentloaded", timeout=30_000)
             await asyncio.sleep(4)
             # Scroll to trigger lazy-load
