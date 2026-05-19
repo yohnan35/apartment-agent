@@ -376,16 +376,27 @@ async def debug_scraper():
             url = (f"https://www.facebook.com/marketplace/112308178781459/search/"
                    f"?query={quote('דירה')}&category_id=propertyrentals")
             await page.goto(url, wait_until="domcontentloaded", timeout=30_000)
+            await asyncio.sleep(4)
+            # Scroll to trigger lazy-load
+            await page.evaluate("window.scrollBy(0, 600)")
             await asyncio.sleep(2)
             result["final_url"] = page.url
             result["title"] = await page.title()
             result["is_login"] = "/login" in page.url
             result["email_input"] = await page.locator('input[name="email"]').count() > 0
-            cards = await page.locator('a[href*="/marketplace/item/"]').all()
-            result["card_count"] = len(cards)
-            # Get first 200 chars of body text for clues
+            # Try multiple selectors
+            cards1 = await page.locator('a[href*="/marketplace/item/"]').all()
+            cards2 = await page.locator('[data-testid*="marketplace"]').all()
+            result["card_count_item"] = len(cards1)
+            result["card_count_testid"] = len(cards2)
+            # Sample HTML to find real selector
+            html_snip = await page.content()
+            # Find first occurrence of /marketplace/item/ in HTML
+            idx = html_snip.find("/marketplace/item/")
+            result["item_link_found"] = idx > -1
+            result["item_link_sample"] = html_snip[max(0,idx-50):idx+80] if idx > -1 else "NOT FOUND"
             body_text = await page.locator("body").inner_text()
-            result["body_preview"] = body_text[:300].replace("\n", " ")
+            result["body_preview"] = body_text[:400].replace("\n", " ")
             await browser.close()
     except Exception as e:
         result["error"] = str(e)
