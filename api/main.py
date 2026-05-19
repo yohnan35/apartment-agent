@@ -358,6 +358,40 @@ def health():
     return {"ok": True}
 
 
+@app.get("/debug/scraper")
+async def debug_scraper():
+    """Debug: load FB Marketplace and return page URL, title, card count."""
+    from playwright.async_api import async_playwright
+    from urllib.parse import quote
+    result = {}
+    try:
+        async with async_playwright() as pw:
+            browser = await pw.chromium.launch(
+                headless=True,
+                args=["--no-sandbox","--disable-setuid-sandbox","--disable-dev-shm-usage",
+                      "--disable-blink-features=AutomationControlled"],
+            )
+            ctx = await scraper_module._load_session(browser)
+            page = await ctx.new_page()
+            url = (f"https://www.facebook.com/marketplace/112308178781459/search/"
+                   f"?query={quote('דירה')}&category_id=propertyrentals")
+            await page.goto(url, wait_until="domcontentloaded", timeout=30_000)
+            await asyncio.sleep(2)
+            result["final_url"] = page.url
+            result["title"] = await page.title()
+            result["is_login"] = "/login" in page.url
+            result["email_input"] = await page.locator('input[name="email"]').count() > 0
+            cards = await page.locator('a[href*="/marketplace/item/"]').all()
+            result["card_count"] = len(cards)
+            # Get first 200 chars of body text for clues
+            body_text = await page.locator("body").inner_text()
+            result["body_preview"] = body_text[:300].replace("\n", " ")
+            await browser.close()
+    except Exception as e:
+        result["error"] = str(e)
+    return result
+
+
 @app.get("/", response_class=HTMLResponse)
 def serve_frontend():
     html_file = FRONTEND_DIR / "apartments.html"
