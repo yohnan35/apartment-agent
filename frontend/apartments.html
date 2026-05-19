@@ -958,7 +958,7 @@ async function doScrape() {
   btn.textContent = '⏳ סורק...';
   try {
     const city = document.getElementById('f-city').value.trim();
-    const query = city ? `דירה למכירה ${city}` : 'דירה למכירה';
+    const query = city ? `דירות למכירה ${city}` : 'דירות למכירה';
     const r = await fetch(API + '/apartments/scrape', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},

@@ -44,7 +44,7 @@ _USER_AGENTS = [
 # Public API
 # ---------------------------------------------------------------------------
 
-async def scrape(query: str = "דירה", max_results: int = 40) -> list[dict]:
+async def scrape(query: str = "דירות למכירה", max_results: int = 40) -> list[dict]:
     """Return a list of listing dicts from Facebook Marketplace."""
     user_agent = random.choice(_USER_AGENTS)
     proxy = {"server": PROXY_URL} if PROXY_URL else None
@@ -209,7 +209,7 @@ async def _scrape_page(page: Page, query: str, max_results: int) -> list[dict]:
     search_url = (
         f"{MARKETPLACE_BASE}/search/"
         f"?query={quote(query)}"
-        f"&category_id=propertyrentals"
+        f"&locale=he_IL"
     )
 
     await page.goto(search_url, wait_until="domcontentloaded", timeout=30_000)
