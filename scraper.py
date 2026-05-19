@@ -22,6 +22,23 @@ _DATA_DIR = Path(os.environ.get("DATA_DIR", "."))
 SESSION_FILE = _DATA_DIR / "fb_session.json"
 MARKETPLACE_BASE = "https://www.facebook.com/marketplace/112308178781459"
 
+# Optional proxy — set PROXY_URL=http://user:pass@host:port in env
+PROXY_URL = os.environ.get("PROXY_URL")  # e.g. "http://user:pass@1.2.3.4:8080"
+
+
+# ---------------------------------------------------------------------------
+# Rotating User-Agents (Windows Chrome — realistic & up to date)
+# ---------------------------------------------------------------------------
+
+_USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Edg/124.0.0.0",
+]
+
 
 # ---------------------------------------------------------------------------
 # Public API
@@ -29,24 +46,32 @@ MARKETPLACE_BASE = "https://www.facebook.com/marketplace/112308178781459"
 
 async def scrape(query: str = "דירה", max_results: int = 40) -> list[dict]:
     """Return a list of listing dicts from Facebook Marketplace."""
+    user_agent = random.choice(_USER_AGENTS)
+    proxy = {"server": PROXY_URL} if PROXY_URL else None
+
     async with async_playwright() as pw:
         browser = await pw.chromium.launch(
             headless=True,
+            proxy=proxy,
             args=[
                 "--disable-blink-features=AutomationControlled",
                 "--no-sandbox",
                 "--disable-setuid-sandbox",
                 "--disable-dev-shm-usage",
                 "--disable-infobars",
+                "--disable-extensions",
                 "--window-size=1280,800",
+                "--disable-gpu",
             ],
         )
-        ctx = await _load_session(browser)
+        ctx = await _load_session(browser, user_agent=user_agent)
         page = await ctx.new_page()
         if _STEALTH_LIB:
             await stealth_async(page)
         try:
             listings = await _scrape_page(page, query, max_results)
+            # Save updated cookies back to DB to keep session fresh
+            await _save_session(ctx)
         finally:
             await browser.close()
     return listings
@@ -95,31 +120,37 @@ async def login_and_save_session() -> None:
 # Internals
 # ---------------------------------------------------------------------------
 
-_USER_AGENT = (
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-    "AppleWebKit/537.36 (KHTML, like Gecko) "
-    "Chrome/124.0.0.0 Safari/537.36"
-)
-
-_CONTEXT_OPTIONS = dict(
-    user_agent=_USER_AGENT,
-    viewport={"width": 1280, "height": 800},
-    locale="he-IL",
-    timezone_id="Asia/Jerusalem",
-    extra_http_headers={
-        "Accept-Language": "he-IL,he;q=0.9,en-US;q=0.8,en;q=0.7",
-    },
-)
-
 _STEALTH_SCRIPT = """
     Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
-    Object.defineProperty(navigator, 'plugins', {get: () => [1,2,3]});
+    Object.defineProperty(navigator, 'plugins', {get: () => [1,2,3,4,5]});
     Object.defineProperty(navigator, 'languages', {get: () => ['he-IL','he','en-US','en']});
-    window.chrome = { runtime: {} };
+    window.chrome = { runtime: {}, loadTimes: function(){}, csi: function(){}, app: {} };
+    Object.defineProperty(navigator, 'permissions', {
+        get: () => ({ query: () => Promise.resolve({ state: 'granted' }) })
+    });
 """
 
 
-async def _load_session(browser) -> BrowserContext:
+def _build_context_options(user_agent: str) -> dict:
+    # Randomise viewport slightly so every session looks different
+    width  = random.choice([1280, 1366, 1440, 1536, 1920])
+    height = random.choice([720, 768, 800, 864, 900, 1080])
+    return dict(
+        user_agent=user_agent,
+        viewport={"width": width, "height": height},
+        locale="he-IL",
+        timezone_id="Asia/Jerusalem",
+        extra_http_headers={
+            "Accept-Language": "he-IL,he;q=0.9,en-US;q=0.8,en;q=0.7",
+        },
+    )
+
+
+# Keep a stable version for the debug endpoint / _load_session fallback
+_CONTEXT_OPTIONS = _build_context_options(_USER_AGENTS[0])
+
+
+async def _load_session(browser, user_agent: str = _USER_AGENTS[0]) -> BrowserContext:
     import apartments_db as db
     state = None
 
@@ -140,18 +171,41 @@ async def _load_session(browser) -> BrowserContext:
         except Exception:
             state = None
 
+    opts = _build_context_options(user_agent)
     if state is not None:
-        ctx = await browser.new_context(storage_state=state, **_CONTEXT_OPTIONS)
+        ctx = await browser.new_context(storage_state=state, **opts)
     else:
-        ctx = await browser.new_context(**_CONTEXT_OPTIONS)
+        ctx = await browser.new_context(**opts)
     await ctx.add_init_script(_STEALTH_SCRIPT)
     return ctx
+
+
+async def _save_session(ctx: BrowserContext) -> None:
+    """Persist updated cookies back to DB after scraping (keeps session alive)."""
+    try:
+        import apartments_db as db
+        storage = await ctx.storage_state()
+        db.set_kv("fb_session", json.dumps(storage))
+    except Exception:
+        pass
+
+
+async def _human_mouse_move(page: Page) -> None:
+    """Move mouse to a random position on the page (mimics human behaviour)."""
+    try:
+        x = random.randint(200, 1000)
+        y = random.randint(200, 600)
+        await page.mouse.move(x, y)
+        await asyncio.sleep(random.uniform(0.1, 0.3))
+        # Small second move
+        await page.mouse.move(x + random.randint(-30, 30), y + random.randint(-30, 30))
+    except Exception:
+        pass
 
 
 async def _scrape_page(page: Page, query: str, max_results: int) -> list[dict]:
     from urllib.parse import quote
 
-    # Target Israeli marketplace using Facebook's numeric location ID for Israel
     search_url = (
         f"{MARKETPLACE_BASE}/search/"
         f"?query={quote(query)}"
@@ -160,12 +214,15 @@ async def _scrape_page(page: Page, query: str, max_results: int) -> list[dict]:
 
     await page.goto(search_url, wait_until="domcontentloaded", timeout=30_000)
 
-    # Detect login wall — FB redirects to /login or shows a login form
+    # Detect login wall
     if "/login" in page.url or await page.locator('input[name="email"]').count() > 0:
         raise RuntimeError("פייסבוק דורש התחברות — יש לייצא Cookies מחדש מהדפדפן")
 
     # Human-like delay after page load (2–4 seconds)
     await asyncio.sleep(random.uniform(2.0, 4.0))
+
+    # Random mouse movement after load
+    await _human_mouse_move(page)
 
     # Dismiss cookie/login dialogs if present
     for selector in [
@@ -175,6 +232,7 @@ async def _scrape_page(page: Page, query: str, max_results: int) -> list[dict]:
         try:
             btn = page.locator(selector).first
             if await btn.is_visible(timeout=2000):
+                await _human_mouse_move(page)
                 await btn.click()
                 await asyncio.sleep(random.uniform(0.5, 1.2))
         except Exception:
@@ -195,7 +253,6 @@ async def _scrape_page(page: Page, query: str, max_results: int) -> list[dict]:
                 if not href:
                     continue
                 url = "https://www.facebook.com" + href if href.startswith("/") else href
-                # Normalise — strip query params for dedup
                 base_url = url.split("?")[0].rstrip("/")
                 if base_url in seen_urls:
                     continue
@@ -214,21 +271,26 @@ async def _scrape_page(page: Page, query: str, max_results: int) -> list[dict]:
             print("[scraper] session expired mid-scrape — returning partial results")
             break
 
-        # Human-like scroll: 2–3 small scrolls with pauses in between
+        # Occasional random mouse movement while scrolling
+        if random.random() < 0.4:
+            await _human_mouse_move(page)
+
+        # Human-like scroll: 2–3 small scrolls with pauses
         num_scrolls = random.randint(2, 3)
         for _ in range(num_scrolls):
             scroll_px = random.randint(400, 900)
             await page.evaluate(f"window.scrollBy(0, {scroll_px})")
             await asyncio.sleep(random.uniform(0.4, 0.9))
 
-        # Pause between scroll rounds (human reads content)
+        # Pause between scroll rounds
         await asyncio.sleep(random.uniform(1.5, 3.0))
         scroll_attempts += 1
 
     return listings
 
 
-_HEBREW_RE = re.compile(r'[א-ת]')  # Hebrew Unicode block
+_HEBREW_RE = re.compile(r'[א-ת]')
+
 
 async def _extract_card_data(card, url: str) -> Optional[dict]:
     """Pull title, price, location text from a marketplace card element."""
@@ -240,7 +302,6 @@ async def _extract_card_data(card, url: str) -> Optional[dict]:
     if not all_text:
         return None
 
-    # Israel-only filter: skip cards with no Hebrew characters at all
     if not _HEBREW_RE.search(all_text):
         return None
 
@@ -250,13 +311,10 @@ async def _extract_card_data(card, url: str) -> Optional[dict]:
     price_text = ""
     price = None
     location = ""
-    description = ""
 
     for line in lines:
-        # Price: ₪, ש"ח, ILS, or $
         if re.search(r"[₪$]|ש[\"״]ח|ILS", line):
             price_text = line
-            # Prefer number immediately adjacent to currency symbol
             m = re.search(r'₪\s*([\d,]+)|([\d,]+)\s*(?:₪|ש[\"״]ח)', line)
             if m:
                 num_str = (m.group(1) or m.group(2)).replace(",", "")
@@ -265,7 +323,6 @@ async def _extract_card_data(card, url: str) -> Optional[dict]:
                 except ValueError:
                     pass
             if price is None:
-                # Fallback: take the largest number > 200 in the line
                 candidates = []
                 for n in re.findall(r'\d[\d,]*', line):
                     try:
@@ -276,20 +333,15 @@ async def _extract_card_data(card, url: str) -> Optional[dict]:
                         pass
                 if candidates:
                     price = max(candidates)
-            # Sanity check: reject obviously wrong values
             if price is not None and (price < 200 or price > 100_000_000):
                 price = None
             continue
-        # Location: first non-title, non-price line
         if not location and len(line) > 2 and line != title:
             location = line
 
-    # Remaining lines become description
     description = " | ".join(lines[1:4])
-
     listing_id = _extract_id(url)
 
-    # Photo URL — grab first img src inside the card
     photo_url = None
     try:
         img_el = card.locator("img").first
@@ -327,6 +379,6 @@ if __name__ == "__main__":
         result = asyncio.run(health_check())
         print(json.dumps(result, ensure_ascii=False, indent=2))
     else:
-        query = sys.argv[1] if len(sys.argv) > 1 else "דירה להשכרה"
+        query = sys.argv[1] if len(sys.argv) > 1 else "דירה למכירה"
         results = asyncio.run(scrape(query=query, max_results=10))
         print(json.dumps(results, ensure_ascii=False, indent=2))
