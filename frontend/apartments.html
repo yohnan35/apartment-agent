@@ -553,7 +553,7 @@
       <label>סוג עסקה</label>
       <div class="toggle-group">
         <div class="toggle-pill" id="pill-rent"   onclick="togglePill('rent'  )">להשכרה</div>
-        <div class="toggle-pill" id="pill-sale"   onclick="togglePill('sale'  )">למכירה</div>
+        <div class="toggle-pill active-yes" id="pill-sale" onclick="togglePill('sale')">למכירה</div>
       </div>
     </div>
 
@@ -634,7 +634,7 @@ const API = '';  // same origin
 // ── State ─────────────────────────────────────────────────
 let allCards = [];
 let activeTab = 'all';
-let toggleState = { rent: null, sale: null, direct: null, broker: null };
+let toggleState = { rent: null, sale: true, direct: null, broker: null };
 let chatHistory = [];
 let openCardId = null;
 let historyCache = {};
@@ -958,7 +958,7 @@ async function doScrape() {
   btn.textContent = '⏳ סורק...';
   try {
     const city = document.getElementById('f-city').value.trim();
-    const query = city ? `דירה ${city}` : 'דירה';
+    const query = city ? `דירה למכירה ${city}` : 'דירה למכירה';
     const r = await fetch(API + '/apartments/scrape', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
