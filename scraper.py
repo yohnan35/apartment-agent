@@ -12,6 +12,11 @@ from pathlib import Path
 from typing import Optional
 
 from playwright.async_api import async_playwright, BrowserContext, Page, TimeoutError as PWTimeout
+try:
+    from playwright_stealth import stealth_async
+    _STEALTH_LIB = True
+except ImportError:
+    _STEALTH_LIB = False
 
 _DATA_DIR = Path(os.environ.get("DATA_DIR", "."))
 SESSION_FILE = _DATA_DIR / "fb_session.json"
@@ -38,6 +43,8 @@ async def scrape(query: str = "דירה", max_results: int = 40) -> list[dict]:
         )
         ctx = await _load_session(browser)
         page = await ctx.new_page()
+        if _STEALTH_LIB:
+            await stealth_async(page)
         try:
             listings = await _scrape_page(page, query, max_results)
         finally:
