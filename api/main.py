@@ -124,7 +124,7 @@ def _convert_cookies_to_playwright(raw_cookies: list[dict]) -> dict:
 
 @app.post("/session/import")
 def import_session(req: CookiesRequest):
-    """Accept cookies from the browser extension and save as Playwright session."""
+    """Accept cookies from the browser extension and save as Playwright session (stored in DB)."""
     if not req.cookies:
         raise HTTPException(status_code=400, detail="רשימת Cookies ריקה")
 
@@ -133,16 +133,26 @@ def import_session(req: CookiesRequest):
         raise HTTPException(status_code=400, detail="לא נמצאו Cookies של פייסבוק")
 
     state = _convert_cookies_to_playwright(fb_cookies)
-    scraper_module.SESSION_FILE.parent.mkdir(parents=True, exist_ok=True)
-    scraper_module.SESSION_FILE.write_text(
-        json.dumps(state, ensure_ascii=False), encoding="utf-8"
-    )
+    # Persist in DB (survives Railway redeploys)
+    db.set_kv("fb_session", json.dumps(state, ensure_ascii=False))
+    # Also write legacy file for local dev convenience
+    try:
+        scraper_module.SESSION_FILE.parent.mkdir(parents=True, exist_ok=True)
+        scraper_module.SESSION_FILE.write_text(
+            json.dumps(state, ensure_ascii=False), encoding="utf-8"
+        )
+    except Exception:
+        pass
     return {"ok": True, "cookies_saved": len(fb_cookies)}
 
 
 @app.get("/session/status")
 def session_status():
-    """Check whether a Facebook session file exists."""
+    """Check whether a Facebook session exists (DB-backed)."""
+    raw = db.get_kv("fb_session")
+    if raw and len(raw) > 10:
+        return {"connected": True}
+    # Fallback: check legacy file
     exists = scraper_module.SESSION_FILE.exists()
     size = scraper_module.SESSION_FILE.stat().st_size if exists else 0
     return {"connected": exists and size > 10}
@@ -150,9 +160,13 @@ def session_status():
 
 @app.delete("/session")
 def delete_session():
-    """Remove saved Facebook session."""
+    """Remove saved Facebook session from DB and file."""
+    db.delete_kv("fb_session")
     if scraper_module.SESSION_FILE.exists():
-        scraper_module.SESSION_FILE.unlink()
+        try:
+            scraper_module.SESSION_FILE.unlink()
+        except Exception:
+            pass
     return {"ok": True}
 
 

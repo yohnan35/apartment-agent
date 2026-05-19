@@ -112,8 +112,27 @@ _STEALTH_SCRIPT = """
 
 
 async def _load_session(browser) -> BrowserContext:
-    if SESSION_FILE.exists():
-        state = json.loads(SESSION_FILE.read_text(encoding="utf-8"))
+    import apartments_db as db
+    state = None
+
+    # 1. Try DB (survives redeploys)
+    raw = db.get_kv("fb_session")
+    if raw:
+        try:
+            state = json.loads(raw)
+        except Exception:
+            state = None
+
+    # 2. Fallback: legacy file (for local dev)
+    if state is None and SESSION_FILE.exists():
+        try:
+            state = json.loads(SESSION_FILE.read_text(encoding="utf-8"))
+            # Migrate to DB so future runs use DB
+            db.set_kv("fb_session", json.dumps(state))
+        except Exception:
+            state = None
+
+    if state is not None:
         ctx = await browser.new_context(storage_state=state, **_CONTEXT_OPTIONS)
     else:
         ctx = await browser.new_context(**_CONTEXT_OPTIONS)

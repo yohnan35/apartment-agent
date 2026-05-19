@@ -58,6 +58,11 @@ CREATE INDEX IF NOT EXISTS idx_price_history_listing
 
 CREATE INDEX IF NOT EXISTS idx_apartments_city ON apartments(city);
 CREATE INDEX IF NOT EXISTS idx_apartments_price ON apartments(price);
+
+CREATE TABLE IF NOT EXISTS kv_store (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
 """
 
 
@@ -335,6 +340,27 @@ def get_price_trends() -> list[dict]:
         {"month": r["month"], "avg_price": round(r["avg_price"]), "count": r["count"]}
         for r in rows
     ]
+
+
+def get_kv(key: str) -> Optional[str]:
+    """Read a value from the key-value store."""
+    with _conn() as con:
+        row = con.execute("SELECT value FROM kv_store WHERE key=?", (key,)).fetchone()
+    return row["value"] if row else None
+
+
+def set_kv(key: str, value: str) -> None:
+    """Write a value to the key-value store (upsert)."""
+    with _conn() as con:
+        con.execute(
+            "INSERT OR REPLACE INTO kv_store (key, value) VALUES (?,?)", (key, value)
+        )
+
+
+def delete_kv(key: str) -> None:
+    """Delete a key from the key-value store."""
+    with _conn() as con:
+        con.execute("DELETE FROM kv_store WHERE key=?", (key,))
 
 
 def get_apartment_stats() -> dict:
