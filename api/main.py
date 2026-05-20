@@ -433,6 +433,78 @@ async def debug_scraper():
     return result
 
 
+@app.get("/debug/http-test")
+async def debug_http_test():
+    """Test Facebook Marketplace access using plain httpx (no Playwright)."""
+    import httpx
+    from urllib.parse import quote
+
+    result = {}
+    raw = db.get_kv("fb_session")
+    if not raw:
+        return {"error": "no session in DB"}
+
+    try:
+        state = json.loads(raw)
+    except Exception:
+        return {"error": "invalid session JSON"}
+
+    # Build cookie dict from Playwright storage_state format
+    cookies = {}
+    for c in state.get("cookies", []):
+        if "facebook.com" in c.get("domain", ""):
+            cookies[c["name"]] = c["value"]
+
+    result["cookie_count"] = len(cookies)
+    result["has_c_user"] = "c_user" in cookies
+    result["has_xs"] = "xs" in cookies
+
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/124.0.0.0 Safari/537.36"
+        ),
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "he-IL,he;q=0.9,en-US;q=0.8",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Connection": "keep-alive",
+        "Upgrade-Insecure-Requests": "1",
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "none",
+    }
+
+    url = (
+        f"https://www.facebook.com/marketplace/112308178781459/search/"
+        f"?query={quote('דירות למכירה')}&locale=he_IL"
+    )
+
+    try:
+        async with httpx.AsyncClient(
+            cookies=cookies,
+            headers=headers,
+            follow_redirects=True,
+            timeout=20,
+        ) as client:
+            resp = await client.get(url)
+            html = resp.text
+            result["status_code"] = resp.status_code
+            result["final_url"] = str(resp.url)
+            result["is_login"] = "/login" in str(resp.url)
+            result["item_links_found"] = html.count("/marketplace/item/")
+            # Find first marketplace item ID
+            import re
+            ids = re.findall(r'/marketplace/item/(\d+)', html)
+            result["item_ids_sample"] = ids[:5]
+            result["html_length"] = len(html)
+            result["html_preview"] = html[:300].replace("\n", " ")
+    except Exception as e:
+        result["error"] = str(e)
+
+    return result
+
+
 @app.get("/", response_class=HTMLResponse)
 def serve_frontend():
     html_file = FRONTEND_DIR / "apartments.html"
