@@ -967,6 +967,8 @@ async function doScrape() {
     const data = await r.json();
     if (!r.ok) throw new Error(data.detail || data.message || JSON.stringify(data));
     alert(data.message || `נסרקו ${data.scraped} דירות`);
+    // אחרי סריקה — מנקים את פילטר העיר ומציגים את כל התוצאות החדשות
+    document.getElementById('f-city').value = '';
     await doFilter();
   } catch(e) {
     alert('שגיאה: ' + e.message);
