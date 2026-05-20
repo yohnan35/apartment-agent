@@ -34,43 +34,61 @@
     overflow: hidden;
   }
 
-  /* ── Top bar ─────────────────────────────────────────── */
+  /* ── Header ─────────────────────────────────────────── */
   header {
     background: var(--bg2);
     border-bottom: 1px solid var(--border);
-    padding: 12px 20px;
+    padding: 10px 20px;
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 14px;
     flex-shrink: 0;
+    flex-wrap: wrap;
   }
-  header h1 { font-size: 1.1rem; color: var(--accent); white-space: nowrap; }
+  header h1 { font-size: 1.05rem; color: var(--accent); white-space: nowrap; }
+
   .stats-bar {
-    display: flex; gap: 20px; font-size: 0.82rem; color: var(--text-muted);
-    flex: 1;
+    display: flex; gap: 18px; font-size: 0.8rem; color: var(--text-muted);
   }
   .stat { display: flex; flex-direction: column; align-items: center; }
-  .stat b { color: var(--text); font-size: 1rem; }
-  .tab-bar { display: flex; gap: 8px; margin-right: auto; }
+  .stat b { color: var(--text); font-size: 0.95rem; }
+
+  .tab-bar { display: flex; gap: 6px; flex-wrap: wrap; }
   .tab-btn {
     background: var(--bg3); border: 1px solid var(--border);
-    color: var(--text-muted); padding: 5px 14px; border-radius: 20px;
-    cursor: pointer; font-size: 0.8rem; transition: all .2s;
+    color: var(--text-muted); padding: 5px 13px; border-radius: 20px;
+    cursor: pointer; font-size: 0.78rem; transition: all .2s;
   }
   .tab-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
   .tab-btn.fresh-tab { border-color: var(--green); color: var(--green); }
   .tab-btn.fresh-tab.active { background: var(--green); border-color: var(--green); color: var(--bg); }
 
-  /* New badge */
-  .badge-new {
-    display: inline-block; background: var(--green); color: var(--bg);
-    font-size: 0.65rem; font-weight: 700; padding: 1px 6px; border-radius: 8px;
-    margin-right: 6px; vertical-align: middle; letter-spacing: 0.5px;
-    animation: pulse-new 2s ease-in-out infinite;
+  .header-actions { display: flex; gap: 8px; align-items: center; margin-right: auto; }
+
+  .btn-scrape-header {
+    background: var(--accent); color: #fff; border: none;
+    padding: 7px 16px; border-radius: 20px; cursor: pointer;
+    font-size: 0.82rem; font-weight: 600; transition: opacity .2s;
+    display: flex; align-items: center; gap: 5px;
   }
-  @keyframes pulse-new {
-    0%, 100% { opacity: 1; } 50% { opacity: 0.6; }
+  .btn-scrape-header:hover { opacity: .85; }
+  .btn-scrape-header:disabled { opacity: .5; cursor: default; }
+
+  .btn-icon {
+    background: var(--bg3); border: 1px solid var(--border);
+    color: var(--text-muted); width: 32px; height: 32px; border-radius: 8px;
+    cursor: pointer; font-size: 0.9rem; display: flex; align-items: center;
+    justify-content: center; transition: all .2s;
   }
+  .btn-icon:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-icon.danger:hover { border-color: var(--red); color: var(--red); }
+
+  .sort-select {
+    background: var(--bg3); border: 1px solid var(--border);
+    color: var(--text-muted); padding: 5px 8px; border-radius: 8px;
+    font-size: 0.78rem; outline: none; cursor: pointer;
+  }
+  .sort-select:focus { border-color: var(--accent); }
 
   /* Auto-refresh indicator */
   .refresh-indicator {
@@ -83,73 +101,35 @@
   }
   @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
 
-  /* ── Main layout ─────────────────────────────────────── */
-  .main { display: flex; flex: 1; overflow: hidden; }
-
-  /* ── Sidebar ──────────────────────────────────────────── */
-  aside {
-    width: 280px; min-width: 240px;
-    background: var(--bg2);
-    border-left: 1px solid var(--border);  /* גבול בין aside (ימין) לתוכן (שמאל) */
-    padding: 16px;
-    overflow-y: auto;
-    display: flex; flex-direction: column; gap: 14px;
-  }
-  aside h2 { font-size: 0.9rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
-  .filter-group { display: flex; flex-direction: column; gap: 6px; }
-  .filter-group label { font-size: 0.8rem; color: var(--text-muted); }
-  .filter-group input, .filter-group select {
-    background: var(--bg3); border: 1px solid var(--border); color: var(--text);
-    padding: 7px 10px; border-radius: 6px; font-size: 0.85rem; width: 100%;
-    outline: none;
-  }
-  .filter-group input:focus, .filter-group select:focus { border-color: var(--accent); }
-  .range-row { display: flex; gap: 6px; }
-  .range-row input { flex: 1; }
-
-  /* Toggle pills */
-  .toggle-group { display: flex; gap: 6px; flex-wrap: wrap; }
-  .toggle-pill {
-    background: var(--bg3); border: 1px solid var(--border);
+  .fb-status-btn {
+    background: none; border: 1px solid var(--border);
     color: var(--text-muted); padding: 5px 12px; border-radius: 20px;
-    cursor: pointer; font-size: 0.8rem; transition: all .15s; user-select: none;
+    cursor: pointer; font-size: 0.75rem; display: flex; align-items: center;
+    gap: 4px; white-space: nowrap;
   }
-  .toggle-pill.active-yes { background: var(--accent); border-color: var(--accent); color: #fff; }
-  .toggle-pill.active-no  { background: var(--red);    border-color: var(--red);    color: #fff; }
+  .fb-status-btn:hover { border-color: var(--accent); color: var(--text); }
+  .status-dot {
+    display: inline-block; width: 8px; height: 8px;
+    border-radius: 50%; flex-shrink: 0;
+  }
+  .status-dot.on  { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .status-dot.off { background: var(--red);   box-shadow: 0 0 6px var(--red); }
 
-  .btn-search {
-    background: var(--accent); color: #fff; border: none;
-    padding: 10px; border-radius: var(--radius); cursor: pointer;
-    font-size: 0.9rem; font-weight: 600; width: 100%;
-    transition: opacity .2s;
-  }
-  .btn-search:hover { opacity: .85; }
-  .btn-scrape {
-    background: var(--bg3); color: var(--accent2); border: 1px solid var(--accent2);
-    padding: 8px; border-radius: var(--radius); cursor: pointer;
-    font-size: 0.8rem; width: 100%; transition: all .2s;
-  }
-  .btn-scrape:hover { background: var(--accent2); color: var(--bg); }
-  .btn-delete {
-    background: var(--bg3); color: var(--red); border: 1px solid var(--red);
-    padding: 8px; border-radius: var(--radius); cursor: pointer;
-    font-size: 0.8rem; width: 100%; transition: all .2s; margin-top: 4px;
-  }
-  .btn-delete:hover { background: var(--red); color: var(--bg); }
-
-  /* Sort */
-  .sort-row { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; }
-  .sort-row select {
-    flex: 1; background: var(--bg3); border: 1px solid var(--border);
-    color: var(--text); padding: 5px 8px; border-radius: 6px; font-size: 0.8rem;
-  }
+  /* ── Main ─────────────────────────────────────────────── */
+  .main { display: flex; flex: 1; overflow: hidden; }
 
   /* ── Results panel ─────────────────────────────────────── */
   .results-panel {
-    flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px;
+    flex: 1; overflow-y: auto; padding: 16px;
+    display: flex; flex-direction: column; gap: 10px;
   }
   .no-results {
-    color: var(--text-muted); text-align: center; margin-top: 60px; font-size: 0.95rem;
+    color: var(--text-muted); text-align: center; margin-top: 80px; font-size: 0.95rem;
+    line-height: 1.8;
+  }
+  .no-results .hint {
+    font-size: 0.82rem; color: var(--text-muted); opacity: .7;
+    margin-top: 8px;
   }
 
   /* ── Card ──────────────────────────────────────────────── */
@@ -178,6 +158,22 @@
   .tag.direct  { border-color: var(--green);  color: var(--green);  }
   .tag.rent    { border-color: var(--accent);  color: var(--accent); }
   .tag.sale    { border-color: var(--accent2); color: var(--accent2);}
+  .tag.src-fb  { border-color: #1877f2; color: #1877f2; }
+  .tag.sqm     { border-color: #a78bfa; color: #a78bfa; }
+  .tag.entry-date { border-color: #ffd166; color: #ffd166; }
+  .tag.broker-suspect {
+    border-color: var(--red); color: var(--red);
+    animation: pulse-new 2s ease-in-out infinite;
+  }
+
+  /* Badge NEW */
+  .badge-new {
+    display: inline-block; background: var(--green); color: var(--bg);
+    font-size: 0.65rem; font-weight: 700; padding: 1px 6px; border-radius: 8px;
+    margin-right: 6px; vertical-align: middle;
+    animation: pulse-new 2s ease-in-out infinite;
+  }
+  @keyframes pulse-new { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
 
   /* Card expanded */
   .card-detail {
@@ -188,24 +184,104 @@
   .card-link { color: var(--accent); text-decoration: none; font-size: 0.8rem; }
   .card-link:hover { text-decoration: underline; }
 
-  /* Price history mini-chart */
   .history-title { font-size: 0.78rem; color: var(--text-muted); margin: 10px 0 4px; }
   .history-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
   .history-table th { color: var(--text-muted); text-align: right; padding: 3px 6px; border-bottom: 1px solid var(--border); }
   .history-table td { padding: 3px 6px; }
 
+  /* Score badge */
+  .score-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 50%;
+    font-size: 0.75rem; font-weight: 700; flex-shrink: 0;
+  }
+  .score-high   { background: #1a3d2b; color: var(--green);  border: 1.5px solid var(--green); }
+  .score-medium { background: #3d3010; color: var(--yellow); border: 1.5px solid var(--yellow); }
+  .score-low    { background: #3d1a1a; color: var(--red);    border: 1.5px solid var(--red); }
+
+  .score-reason {
+    margin-top: 8px; padding: 8px 10px;
+    background: var(--bg3); border-radius: 6px;
+    font-size: 0.8rem; color: var(--text-muted);
+    border-right: 3px solid var(--accent);
+    line-height: 1.5;
+  }
+
+  .price-analysis {
+    font-size: 0.72rem; padding: 2px 7px; border-radius: 10px; margin-top: 5px;
+    display: inline-block;
+  }
+  .price-cheap    { background: #1a3d2b; color: var(--green); }
+  .price-expensive{ background: #3d1a1a; color: var(--red); }
+
+  .heart-btn {
+    background: none; border: none; cursor: pointer; font-size: 1.1rem;
+    padding: 0 4px; line-height: 1; transition: transform .15s; flex-shrink: 0;
+  }
+  .heart-btn:hover { transform: scale(1.3); }
+
+  .card-photo {
+    width: 100%; height: 150px; overflow: hidden;
+    border-radius: 6px; margin-bottom: 10px;
+  }
+  .card-photo img {
+    width: 100%; height: 100%; object-fit: cover;
+    display: block; transition: transform .3s;
+  }
+  .card:hover .card-photo img { transform: scale(1.03); }
+
+  .phone-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #1a3d2b; border: 1px solid var(--green);
+    color: var(--green); padding: 5px 14px; border-radius: 20px;
+    font-size: 0.82rem; cursor: pointer; text-decoration: none;
+    transition: all .2s; margin-top: 8px;
+  }
+  .phone-btn:hover { background: var(--green); color: var(--bg); }
+
+  /* ── Map panel ───────────────────────────────────────────── */
+  .map-panel { flex: 1; min-height: 0; display: none; flex-direction: column; }
+  .map-panel.visible { display: flex; }
+  #map-container { flex: 1; min-height: 0; }
+
+  /* Leaflet dark theme */
+  .leaflet-popup-content-wrapper {
+    background: #1a1d27; color: #e2e8f0;
+    border: 1px solid #2e3248; border-radius: 10px;
+  }
+  .leaflet-popup-tip { background: #1a1d27; }
+  .leaflet-popup-close-button { color: #7c85a2 !important; }
+  .leaflet-tile { filter: brightness(0.85) saturate(0.9); }
+  .leaflet-control-zoom a { background: #1a1d27 !important; color: #e2e8f0 !important; border-color: #2e3248 !important; }
+  .leaflet-control-attribution { background: #1a1d2799 !important; color: #7c85a2 !important; font-size: 0.65rem !important; }
+
+  /* ── Market panel ─────────────────────────────────────────── */
+  .market-panel {
+    flex: 1; overflow-y: auto; padding: 20px;
+    display: none; flex-direction: column; gap: 24px;
+  }
+  .market-panel.visible { display: flex; }
+  .chart-card {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 18px;
+  }
+  .chart-card h3 { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 14px; }
+  .chart-wrap { position: relative; height: 260px; }
+
   /* ── Chat pane ─────────────────────────────────────────── */
   .chat-toggle {
     position: fixed; bottom: 20px; left: 20px;
     background: var(--accent); color: #fff; border: none;
-    width: 52px; height: 52px; border-radius: 50%; font-size: 1.4rem;
-    cursor: pointer; box-shadow: 0 4px 20px rgba(108,99,255,.4);
+    width: 56px; height: 56px; border-radius: 50%; font-size: 1.5rem;
+    cursor: pointer; box-shadow: 0 4px 20px rgba(108,99,255,.5);
     display: flex; align-items: center; justify-content: center;
-    z-index: 100;
+    z-index: 100; transition: transform .2s;
   }
+  .chat-toggle:hover { transform: scale(1.1); }
+
   .chat-pane {
-    position: fixed; bottom: 80px; left: 20px;
-    width: 380px; height: 520px; max-height: 70vh;
+    position: fixed; bottom: 86px; left: 20px;
+    width: 400px; height: 560px; max-height: 75vh;
     background: var(--bg2); border: 1px solid var(--border);
     border-radius: var(--radius); flex-direction: column;
     z-index: 99; box-shadow: 0 8px 40px rgba(0,0,0,.5);
@@ -216,16 +292,18 @@
     padding: 12px 16px; background: var(--bg3);
     border-bottom: 1px solid var(--border);
     border-radius: var(--radius) var(--radius) 0 0;
-    font-size: 0.9rem; font-weight: 600; display: flex; justify-content: space-between;
+    font-size: 0.9rem; font-weight: 600;
+    display: flex; justify-content: space-between; align-items: center;
   }
   .chat-close { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.1rem; }
   .chat-messages {
-    flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px;
+    flex: 1; overflow-y: auto; padding: 12px;
+    display: flex; flex-direction: column; gap: 8px;
   }
-  .msg { max-width: 85%; padding: 8px 12px; border-radius: 10px; font-size: 0.84rem; line-height: 1.5; }
+  .msg { max-width: 88%; padding: 8px 12px; border-radius: 10px; font-size: 0.84rem; line-height: 1.5; }
   .msg.user { background: var(--accent); color: #fff; align-self: flex-end; border-radius: 10px 10px 2px 10px; }
   .msg.assistant { background: var(--bg3); color: var(--text); align-self: flex-start; border-radius: 10px 10px 10px 2px; }
-  .msg.tool-info { background: none; border: 1px dashed var(--border); color: var(--text-muted); font-size: 0.75rem; align-self: flex-start; }
+  .msg.tool-info { background: none; border: 1px dashed var(--border); color: var(--text-muted); font-size: 0.74rem; align-self: flex-start; }
   .chat-input-row {
     display: flex; gap: 8px; padding: 10px 12px;
     border-top: 1px solid var(--border);
@@ -242,129 +320,6 @@
     flex-shrink: 0; display: flex; align-items: center; justify-content: center;
   }
   .typing { color: var(--text-muted); font-size: 0.78rem; padding: 4px 12px; }
-
-  /* Score badge */
-  .score-badge {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 28px; height: 28px; border-radius: 50%;
-    font-size: 0.75rem; font-weight: 700; flex-shrink: 0;
-  }
-  .score-high   { background: #1a3d2b; color: var(--green);  border: 1.5px solid var(--green); }
-  .score-medium { background: #3d3010; color: var(--yellow); border: 1.5px solid var(--yellow); }
-  .score-low    { background: #3d1a1a; color: var(--red);    border: 1.5px solid var(--red); }
-
-  /* Price analysis */
-  .price-analysis {
-    font-size: 0.72rem; padding: 2px 7px; border-radius: 10px; margin-top: 5px;
-    display: inline-block;
-  }
-  .price-cheap    { background: #1a3d2b; color: var(--green); }
-  .price-expensive{ background: #3d1a1a; color: var(--red); }
-
-  /* Heart / favorite */
-  .heart-btn {
-    background: none; border: none; cursor: pointer; font-size: 1.1rem;
-    padding: 0 4px; line-height: 1; transition: transform .15s; flex-shrink: 0;
-  }
-  .heart-btn:hover { transform: scale(1.3); }
-
-  /* Export button */
-  .btn-export {
-    background: var(--bg3); color: var(--text-muted); border: 1px solid var(--border);
-    padding: 8px; border-radius: var(--radius); cursor: pointer;
-    font-size: 0.8rem; width: 100%; transition: all .2s; margin-top: 4px;
-  }
-  .btn-export:hover { border-color: var(--accent2); color: var(--accent2); }
-  .btn-yad2 {
-    background: var(--bg3); color: #ff6b35; border: 1px solid #ff6b35;
-    padding: 8px; border-radius: var(--radius); cursor: pointer;
-    font-size: 0.8rem; width: 100%; transition: all .2s;
-  }
-  .btn-yad2:hover { background: #ff6b35; color: var(--bg); }
-
-  /* Source tag */
-  .tag.src-fb   { border-color: #1877f2; color: #1877f2; }
-  .tag.src-yad2 { border-color: #ff6b35; color: #ff6b35; }
-
-  /* Entry date tag */
-  .tag.entry-date { border-color: #ffd166; color: #ffd166; }
-
-  /* Market panel */
-  .market-panel {
-    flex: 1; overflow-y: auto; padding: 20px;
-    display: none; flex-direction: column; gap: 24px;
-  }
-  .market-panel.visible { display: flex; }
-  .chart-card {
-    background: var(--bg2); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 18px;
-  }
-  .chart-card h3 { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 14px; }
-  .chart-wrap { position: relative; height: 260px; }
-
-  /* Price per sqm */
-  .tag.sqm { border-color: #a78bfa; color: #a78bfa; }
-
-  /* AI score reason */
-  .score-reason {
-    margin-top: 8px; padding: 8px 10px;
-    background: var(--bg3); border-radius: 6px;
-    font-size: 0.8rem; color: var(--text-muted);
-    border-right: 3px solid var(--accent);
-    line-height: 1.5;
-  }
-
-  /* Broker suspect warning badge */
-  .tag.broker-suspect {
-    border-color: var(--red); color: var(--red);
-    animation: pulse-new 2s ease-in-out infinite;
-  }
-
-  /* ── Map panel ───────────────────────────────────────────── */
-  .map-panel { flex: 1; min-height: 0; display: none; flex-direction: column; }
-  .map-panel.visible { display: flex; }
-  #map-container { flex: 1; min-height: 0; }
-
-  /* Leaflet dark theme override */
-  .leaflet-popup-content-wrapper {
-    background: #1a1d27; color: #e2e8f0;
-    border: 1px solid #2e3248; border-radius: 10px;
-    box-shadow: 0 4px 24px rgba(0,0,0,.6);
-  }
-  .leaflet-popup-tip { background: #1a1d27; }
-  .leaflet-popup-close-button { color: #7c85a2 !important; font-size: 1.1rem !important; }
-  .leaflet-tile { filter: brightness(0.85) saturate(0.9); }
-  .leaflet-control-zoom a {
-    background: #1a1d27 !important; color: #e2e8f0 !important;
-    border-color: #2e3248 !important;
-  }
-  .leaflet-control-attribution { background: #1a1d2799 !important; color: #7c85a2 !important; font-size: 0.65rem !important; }
-
-  /* ── Card photo ──────────────────────────────────────────── */
-  .card-photo {
-    width: 100%; height: 150px; overflow: hidden;
-    border-radius: 6px; margin-bottom: 10px;
-  }
-  .card-photo img {
-    width: 100%; height: 100%; object-fit: cover;
-    display: block; transition: transform .3s;
-  }
-  .card:hover .card-photo img { transform: scale(1.03); }
-
-  /* ── Phone button ────────────────────────────────────────── */
-  .phone-btn {
-    display: inline-flex; align-items: center; gap: 6px;
-    background: #1a3d2b; border: 1px solid var(--green);
-    color: var(--green); padding: 5px 14px; border-radius: 20px;
-    font-size: 0.82rem; cursor: pointer; text-decoration: none;
-    transition: all .2s; margin-top: 8px;
-  }
-  .phone-btn:hover { background: var(--green); color: var(--bg); }
-
-  /* Scrollbar */
-  ::-webkit-scrollbar { width: 5px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
   /* ── Setup modal ───────────────────────────────────────── */
   .modal-backdrop {
@@ -400,19 +355,6 @@
     border: 1px solid var(--border); padding: 9px 20px;
     border-radius: 8px; cursor: pointer; font-size: 0.88rem;
   }
-  .status-dot {
-    display: inline-block; width: 8px; height: 8px;
-    border-radius: 50%; margin-left: 6px;
-  }
-  .status-dot.on  { background: var(--green); box-shadow: 0 0 6px var(--green); }
-  .status-dot.off { background: var(--red);   box-shadow: 0 0 6px var(--red); }
-  .fb-status-btn {
-    background: none; border: 1px solid var(--border);
-    color: var(--text-muted); padding: 4px 12px; border-radius: 20px;
-    cursor: pointer; font-size: 0.75rem; display: flex; align-items: center;
-    gap: 4px; white-space: nowrap;
-  }
-  .fb-status-btn:hover { border-color: var(--accent); color: var(--text); }
 
   /* Loading spinner */
   .spinner {
@@ -421,6 +363,10 @@
     border-radius: 50%; animation: spin .7s linear infinite;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 </style>
 </head>
 <body>
@@ -429,12 +375,12 @@
 <div class="modal-backdrop hidden" id="setup-modal">
   <div class="modal">
     <h2>🔗 חיבור לפייסבוק</h2>
-    <p>כדי לסרוק מרקטפלייס, האפליקציה צריכה את ה-Cookies של הפייסבוק שלך. זה בטוח — הם נשמרים רק על השרת שלך.</p>
+    <p>כדי לסרוק מרקטפלייס, האפליקציה צריכה את ה-Cookies של הפייסבוק שלך.</p>
     <ol>
       <li>התקן את התוסף <a href="https://chrome.google.com/webstore/detail/cookie-editor/hlkenndednhfkekhgcdicdfddnkalmdm" target="_blank">Cookie-Editor</a> לכרום</li>
       <li>היכנס לפייסבוק בדפדפן רגיל</li>
-      <li>פתח את Cookie-Editor ולחץ <strong>Export → Export as JSON</strong></li>
-      <li>הדבק את ה-JSON כאן:</li>
+      <li>פתח Cookie-Editor ולחץ <strong>Export → Export as JSON</strong></li>
+      <li>הדבק כאן:</li>
     </ol>
     <textarea id="cookies-input" placeholder='[{"name":"c_user","value":"...","domain":".facebook.com",...}]'></textarea>
     <div id="setup-error" style="color:var(--red);font-size:0.8rem;display:none"></div>
@@ -447,153 +393,60 @@
 
 <!-- ── Header ──────────────────────────────────────────── -->
 <header>
-  <h1>🏠 סוכן דירות</h1>
+  <h1>🏠 סוכן דירות AI</h1>
+
   <div class="stats-bar">
-    <div class="stat"><b id="stat-total">–</b>סה"כ</div>
+    <div class="stat"><b id="stat-total">–</b>דירות</div>
     <div class="stat"><b id="stat-direct">–</b>ישיר</div>
     <div class="stat"><b id="stat-broker">–</b>תיווך</div>
     <div class="stat"><b id="stat-avg">–</b>ממוצע ₪</div>
   </div>
+
   <div class="tab-bar">
     <button class="tab-btn active" onclick="setTab('all',this)">הכל</button>
-    <button class="tab-btn fresh-tab" onclick="setTab('fresh',this)">🆕 טרי</button>
-    <button class="tab-btn" onclick="setTab('changed',this)">שינויי מחיר</button>
+    <button class="tab-btn fresh-tab" onclick="setTab('fresh',this)">🆕 חדש</button>
+    <button class="tab-btn" onclick="setTab('changed',this)">💰 שינוי מחיר</button>
     <button class="tab-btn" onclick="setTab('favorites',this)">❤️ מועדפים</button>
     <button class="tab-btn" onclick="setTab('map',this)">🗺️ מפה</button>
     <button class="tab-btn" onclick="setTab('market',this)">📊 שוק</button>
   </div>
+
   <div class="refresh-indicator" id="refresh-indicator" style="display:none">
     <div class="refresh-dot"></div><span id="refresh-countdown"></span>
   </div>
-  <button class="fb-status-btn" id="fb-status-btn" onclick="openSetup()">
-    <span class="status-dot off" id="fb-dot"></span>
-    <span id="fb-status-text">פייסבוק: לא מחובר</span>
-  </button>
+
+  <div class="header-actions">
+    <select class="sort-select" id="sort-by" onchange="renderCards()">
+      <option value="date">מיין: תאריך</option>
+      <option value="price_asc">מחיר עולה</option>
+      <option value="price_desc">מחיר יורד</option>
+      <option value="rooms">חדרים</option>
+      <option value="score">ציון AI</option>
+    </select>
+    <button class="btn-icon" onclick="exportCSV()" title="ייצוא Excel">📤</button>
+    <button class="btn-icon danger" onclick="doClear()" title="מחק הכל">🗑</button>
+    <button class="btn-scrape-header" id="btn-scrape" onclick="doScrape()">⬇ סרוק מרקטפלייס</button>
+    <button class="fb-status-btn" id="fb-status-btn" onclick="openSetup()">
+      <span class="status-dot off" id="fb-dot"></span>
+      <span id="fb-status-text">פייסבוק</span>
+    </button>
+  </div>
 </header>
 
 <!-- ── Main ────────────────────────────────────────────── -->
 <div class="main">
 
-  <!-- Sidebar — first in DOM = right side in RTL flex -->
-  <aside>
-    <h2>סינון</h2>
-
-    <div class="filter-group">
-      <label>עיר</label>
-      <input id="f-city" type="text" placeholder="תל אביב, ירושלים..." list="cities-list" autocomplete="off">
-      <datalist id="cities-list">
-        <option value="תל אביב">
-        <option value="ירושלים">
-        <option value="חיפה">
-        <option value="ראשון לציון">
-        <option value="פתח תקווה">
-        <option value="אשדוד">
-        <option value="נתניה">
-        <option value="באר שבע">
-        <option value="בני ברק">
-        <option value="רמת גן">
-        <option value="רחובות">
-        <option value="בת ים">
-        <option value="הרצליה">
-        <option value="כפר סבא">
-        <option value="מודיעין">
-        <option value="חולון">
-        <option value="לוד">
-        <option value="רמלה">
-        <option value="עפולה">
-        <option value="נהריה">
-        <option value="טבריה">
-        <option value="צפת">
-        <option value="אשקלון">
-        <option value="אילת">
-        <option value="גבעתיים">
-        <option value="רעננה">
-        <option value="הוד השרון">
-        <option value="יבנה">
-        <option value="קריית גת">
-        <option value="קריית אתא">
-        <option value="קריית ביאליק">
-        <option value="נס ציונה">
-        <option value="אור יהודה">
-        <option value="אלעד">
-        <option value="ביתר עילית">
-        <option value="מעלה אדומים">
-        <option value="מודיעין עילית">
-        <option value="אבו גוש">
-        <option value="גבעת שמואל">
-        <option value="פרדס חנה">
-        <option value="זכרון יעקב">
-        <option value="עכו">
-        <option value="כרמיאל">
-      </datalist>
-    </div>
-
-    <div class="filter-group">
-      <label>חדרים</label>
-      <div class="range-row">
-        <input id="f-rooms-min" type="number" placeholder="מינ׳" min="1" max="20" step="0.5">
-        <input id="f-rooms-max" type="number" placeholder="מקס׳" min="1" max="20" step="0.5">
-      </div>
-    </div>
-
-    <div class="filter-group">
-      <label>מחיר ₪</label>
-      <div class="range-row">
-        <input id="f-price-min" type="number" placeholder="מינ׳" min="0" step="1000">
-        <input id="f-price-max" type="number" placeholder="מקס׳" min="0" step="1000">
-      </div>
-    </div>
-
-    <div class="filter-group">
-      <label>קומה</label>
-      <input id="f-floor" type="number" placeholder="כל הקומות" min="0" max="50">
-    </div>
-
-    <div class="filter-group">
-      <label>סוג עסקה</label>
-      <div class="toggle-group">
-        <div class="toggle-pill" id="pill-rent"   onclick="togglePill('rent'  )">להשכרה</div>
-        <div class="toggle-pill" id="pill-sale" onclick="togglePill('sale')">למכירה</div>
-      </div>
-    </div>
-
-    <div class="filter-group">
-      <label>מתווך / ישיר</label>
-      <div class="toggle-group">
-        <div class="toggle-pill" id="pill-direct" onclick="togglePill('direct')">ישיר</div>
-        <div class="toggle-pill" id="pill-broker" onclick="togglePill('broker')">תיווך</div>
-      </div>
-    </div>
-
-    <div class="filter-group sort-row">
-      <label>מיין לפי</label>
-      <select id="sort-by" onchange="renderCards()">
-        <option value="date">תאריך</option>
-        <option value="price_asc">מחיר עולה</option>
-        <option value="price_desc">מחיר יורד</option>
-        <option value="rooms">חדרים</option>
-        <option value="change">שינוי מחיר</option>
-      </select>
-    </div>
-
-    <button class="btn-search" onclick="doFilter()">🔍 חפש</button>
-    <button class="btn-scrape" onclick="doScrape()">⬇ סרוק מפייסבוק</button>
-    <button class="btn-yad2" onclick="doScrapeYad2()">🏠 סרוק יד2</button>
-    <button class="btn-delete" onclick="doClear()">🗑 מחק את כל התוצאות</button>
-    <button class="btn-export" onclick="exportCSV()">📤 ייצוא ל-Excel</button>
-  </aside>
-
-  <!-- Results — after aside = left side in RTL flex -->
   <div class="results-panel" id="results">
-    <div class="no-results">לחץ "חפש" כדי לטעון דירות</div>
+    <div class="no-results">
+      💬 לחץ על כפתור הצ'אט ושאל אותי מה לחפש
+      <div class="hint">לדוגמה: "חפש דירה 3 חדרים בתל אביב עד 2 מיליון"</div>
+    </div>
   </div>
 
-  <!-- Map panel -->
   <div class="map-panel" id="map-panel">
     <div id="map-container"></div>
   </div>
 
-  <!-- Market panel -->
   <div class="market-panel" id="market-panel">
     <div class="chart-card">
       <h3>💰 ממוצע מחיר לפי עיר</h3>
@@ -612,45 +465,61 @@
 </div>
 
 <!-- ── Chat ──────────────────────────────────────────────── -->
-<button class="chat-toggle" onclick="toggleChat()" title="סוכן AI">💬</button>
+<button class="chat-toggle" onclick="toggleChat()" title="חיפוש חכם AI">💬</button>
 
 <div class="chat-pane" id="chat-pane">
   <div class="chat-header">
-    <span>🤖 סוכן דירות AI</span>
+    <span>🤖 חיפוש חכם — סוכן AI</span>
     <button class="chat-close" onclick="toggleChat()">✕</button>
   </div>
   <div class="chat-messages" id="chat-messages">
-    <div class="msg assistant">שלום! אני יכול לעזור לך למצוא דירות. נסה: "חפש דירות בתל אביב עד 5000 ₪"</div>
+    <div class="msg assistant">שלום! אני יכול לחפש לך דירות בפייסבוק מרקטפלייס. נסה:<br><br>
+    📍 "חפש דירה 3 חדרים בתל אביב"<br>
+    💰 "דירות עד 1.5 מיליון בירושלים"<br>
+    🏢 "דירה ישירה מבעלים בחיפה"</div>
   </div>
-  <div class="typing" id="chat-typing" style="display:none">מקליד<span class="spinner" style="margin-right:6px"></span></div>
+  <div class="typing" id="chat-typing" style="display:none">מחפש<span class="spinner" style="margin-right:6px"></span></div>
   <div class="chat-input-row">
-    <input class="chat-input" id="chat-input" type="text" placeholder="שאל אותי..." onkeydown="if(event.key==='Enter')sendChat()">
+    <input class="chat-input" id="chat-input" type="text"
+      placeholder="מה אתה מחפש?"
+      onkeydown="if(event.key==='Enter')sendChat()">
     <button class="chat-send" onclick="sendChat()">▶</button>
   </div>
 </div>
 
 <script>
-const API = '';  // same origin
+const API = '';
 
-// ── State ─────────────────────────────────────────────────
+// ── State ────────────────────────────────────────────────
 let allCards = [];
 let activeTab = 'all';
-let toggleState = { rent: null, sale: null, direct: null, broker: null };
 let chatHistory = [];
 let openCardId = null;
 let historyCache = {};
 let autoRefreshTimer = null;
 let autoRefreshCountdown = 0;
-const AUTO_REFRESH_SECONDS = 300; // 5 minutes
+const AUTO_REFRESH_SECONDS = 300;
 let favorites = new Set(JSON.parse(localStorage.getItem('apt_favorites') || '[]'));
 let cityAverages = {};
+let chartInstances = {};
 
-// ── Init ──────────────────────────────────────────────────
+// ── Init ─────────────────────────────────────────────────
 window.onload = () => {
   checkFbStatus();
   loadStats();
-  doFilter();
+  loadAll();
+  // Auto-open chat on first visit
+  if (!localStorage.getItem('chat_opened')) {
+    setTimeout(() => {
+      document.getElementById('chat-pane').classList.add('open');
+      localStorage.setItem('chat_opened', '1');
+    }, 600);
+  }
 };
+
+function loadAll() {
+  doFilter();
+}
 
 // ── Facebook session ──────────────────────────────────────
 async function checkFbStatus() {
@@ -663,7 +532,7 @@ async function checkFbStatus() {
 
 function setFbStatus(connected) {
   document.getElementById('fb-dot').className = 'status-dot ' + (connected ? 'on' : 'off');
-  document.getElementById('fb-status-text').textContent = connected ? 'פייסבוק: מחובר' : 'פייסבוק: לא מחובר';
+  document.getElementById('fb-status-text').textContent = connected ? 'פייסבוק ✓' : 'פייסבוק ✗';
 }
 
 function openSetup() {
@@ -671,7 +540,6 @@ function openSetup() {
   document.getElementById('cookies-input').value = '';
   document.getElementById('setup-modal').classList.remove('hidden');
 }
-
 function closeSetup() {
   document.getElementById('setup-modal').classList.add('hidden');
 }
@@ -680,38 +548,33 @@ async function submitCookies() {
   const raw = document.getElementById('cookies-input').value.trim();
   const errEl = document.getElementById('setup-error');
   errEl.style.display = 'none';
-
   let cookies;
   try { cookies = JSON.parse(raw); } catch(e) {
-    errEl.textContent = 'JSON לא תקין — ודא שהעתקת נכון מ-Cookie-Editor';
-    errEl.style.display = 'block'; return;
+    errEl.textContent = 'JSON לא תקין'; errEl.style.display = 'block'; return;
   }
   if (!Array.isArray(cookies) || !cookies.length) {
-    errEl.textContent = 'רשימה ריקה';
-    errEl.style.display = 'block'; return;
+    errEl.textContent = 'רשימה ריקה'; errEl.style.display = 'block'; return;
   }
-
   const btn = document.querySelector('#setup-modal .btn-primary');
   btn.textContent = '⏳ שומר...'; btn.disabled = true;
   try {
     const r = await fetch(API + '/session/import', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
+      method: 'POST', headers: {'Content-Type':'application/json'},
       body: JSON.stringify({cookies})
     });
     const data = await r.json();
     if (!r.ok) throw new Error(data.detail || 'שגיאה');
     setFbStatus(true);
     closeSetup();
-    alert(`✅ נשמרו ${data.cookies_saved} Cookies — פייסבוק מחובר!`);
+    alert(`✅ נשמרו ${data.cookies_saved} Cookies`);
   } catch(e) {
-    errEl.textContent = 'שגיאה: ' + e.message;
-    errEl.style.display = 'block';
+    errEl.textContent = 'שגיאה: ' + e.message; errEl.style.display = 'block';
   } finally {
     btn.textContent = '💾 שמור וחבר'; btn.disabled = false;
   }
 }
 
+// ── Stats ────────────────────────────────────────────────
 async function loadStats() {
   try {
     const r = await fetch(API + '/apartments/stats');
@@ -724,23 +587,17 @@ async function loadStats() {
 }
 
 // ── Tabs ──────────────────────────────────────────────────
-let chartInstances = {};
-
 function setTab(tab, el) {
   activeTab = tab;
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   el.classList.add('active');
-
   const isMarket = tab === 'market';
   const isMap    = tab === 'map';
-
   document.getElementById('results').style.display = (isMarket || isMap) ? 'none' : '';
   document.getElementById('market-panel').classList.toggle('visible', isMarket);
   document.getElementById('map-panel').classList.toggle('visible', isMap);
-
   if (tab === 'fresh') startAutoRefresh();
   else stopAutoRefresh();
-
   if (isMarket) loadMarketCharts();
   else if (isMap) { initMap(); setTimeout(() => { map.invalidateSize(); updateMapPins(allCards); }, 120); }
   else renderCards();
@@ -756,9 +613,7 @@ async function loadMarketCharts() {
     renderCityChart(cityData);
     renderSqmChart(cityData);
     renderTrendChart(trendData);
-  } catch(e) {
-    console.error('chart load error', e);
-  }
+  } catch(e) {}
 }
 
 function mkChart(id, config) {
@@ -770,17 +625,10 @@ function renderCityChart(data) {
   const cities = data.filter(d => d.avg_price).slice(0, 12);
   mkChart('chart-city', {
     type: 'bar',
-    data: {
-      labels: cities.map(d => d.city),
-      datasets: [{
-        label: 'ממוצע מחיר ₪',
-        data: cities.map(d => d.avg_price),
-        backgroundColor: '#6c63ff99',
-        borderColor: '#6c63ff',
-        borderWidth: 1,
-        borderRadius: 4,
-      }]
-    },
+    data: { labels: cities.map(d => d.city), datasets: [{
+      label: 'ממוצע ₪', data: cities.map(d => d.avg_price),
+      backgroundColor: '#6c63ff99', borderColor: '#6c63ff', borderWidth: 1, borderRadius: 4,
+    }]},
     options: chartOpts('₪', cities.map(d => d.count)),
   });
 }
@@ -789,17 +637,10 @@ function renderSqmChart(data) {
   const cities = data.filter(d => d.avg_price_sqm).slice(0, 12);
   mkChart('chart-sqm', {
     type: 'bar',
-    data: {
-      labels: cities.map(d => d.city),
-      datasets: [{
-        label: '₪ למ"ר',
-        data: cities.map(d => d.avg_price_sqm),
-        backgroundColor: '#a78bfa99',
-        borderColor: '#a78bfa',
-        borderWidth: 1,
-        borderRadius: 4,
-      }]
-    },
+    data: { labels: cities.map(d => d.city), datasets: [{
+      label: '₪/מ"ר', data: cities.map(d => d.avg_price_sqm),
+      backgroundColor: '#a78bfa99', borderColor: '#a78bfa', borderWidth: 1, borderRadius: 4,
+    }]},
     options: chartOpts('₪/מ"ר'),
   });
 }
@@ -807,19 +648,11 @@ function renderSqmChart(data) {
 function renderTrendChart(data) {
   mkChart('chart-trend', {
     type: 'line',
-    data: {
-      labels: data.map(d => d.month),
-      datasets: [{
-        label: 'ממוצע מחיר חודשי ₪',
-        data: data.map(d => d.avg_price),
-        borderColor: '#4ecca3',
-        backgroundColor: '#4ecca320',
-        fill: true,
-        tension: 0.3,
-        pointRadius: 4,
-        pointBackgroundColor: '#4ecca3',
-      }]
-    },
+    data: { labels: data.map(d => d.month), datasets: [{
+      label: 'ממוצע חודשי ₪', data: data.map(d => d.avg_price),
+      borderColor: '#4ecca3', backgroundColor: '#4ecca320',
+      fill: true, tension: 0.3, pointRadius: 4, pointBackgroundColor: '#4ecca3',
+    }]},
     options: chartOpts('₪'),
   });
 }
@@ -829,26 +662,20 @@ function chartOpts(unit, counts) {
     responsive: true, maintainAspectRatio: false,
     plugins: {
       legend: { display: false },
-      tooltip: {
-        callbacks: {
-          label: ctx => {
-            let s = `${fmtPrice(ctx.parsed.y)} ${unit}`;
-            if (counts) s += ` (${counts[ctx.dataIndex]} דירות)`;
-            return s;
-          }
-        }
-      }
+      tooltip: { callbacks: { label: ctx => {
+        let s = `${fmtPrice(ctx.parsed.y)} ${unit}`;
+        if (counts) s += ` (${counts[ctx.dataIndex]} דירות)`;
+        return s;
+      }}}
     },
     scales: {
       x: { ticks: { color: '#7c85a2', font: { size: 11 } }, grid: { color: '#2e3248' } },
-      y: { ticks: { color: '#7c85a2', font: { size: 11 },
-                    callback: v => fmtPrice(v) + ' ' + unit },
-           grid: { color: '#2e3248' } },
+      y: { ticks: { color: '#7c85a2', font: { size: 11 }, callback: v => fmtPrice(v) }, grid: { color: '#2e3248' } },
     },
   };
 }
 
-// ── Auto-refresh (fresh tab) ──────────────────────────────
+// ── Auto-refresh ──────────────────────────────────────────
 function startAutoRefresh() {
   stopAutoRefresh();
   document.getElementById('refresh-indicator').style.display = 'flex';
@@ -857,18 +684,13 @@ function startAutoRefresh() {
   autoRefreshTimer = setInterval(() => {
     autoRefreshCountdown--;
     updateCountdown();
-    if (autoRefreshCountdown <= 0) {
-      autoRefreshCountdown = AUTO_REFRESH_SECONDS;
-      doFilter();
-    }
+    if (autoRefreshCountdown <= 0) { autoRefreshCountdown = AUTO_REFRESH_SECONDS; doFilter(); }
   }, 1000);
 }
-
 function stopAutoRefresh() {
   if (autoRefreshTimer) { clearInterval(autoRefreshTimer); autoRefreshTimer = null; }
   document.getElementById('refresh-indicator').style.display = 'none';
 }
-
 function updateCountdown() {
   const m = Math.floor(autoRefreshCountdown / 60);
   const s = autoRefreshCountdown % 60;
@@ -876,49 +698,9 @@ function updateCountdown() {
     `מתרענן בעוד ${m}:${String(s).padStart(2,'0')}`;
 }
 
-// ── Toggle pills ──────────────────────────────────────────
-function togglePill(key) {
-  const pill = document.getElementById('pill-' + key);
-  const group = key === 'direct' || key === 'broker' ? ['direct','broker'] : ['rent','sale'];
-  const sibling = group.find(k => k !== key);
-
-  if (pill.classList.contains('active-yes')) {
-    pill.classList.remove('active-yes');
-    toggleState[key] = null;
-  } else {
-    pill.classList.add('active-yes');
-    toggleState[key] = true;
-    // deactivate sibling
-    document.getElementById('pill-' + sibling).classList.remove('active-yes','active-no');
-    toggleState[sibling] = null;
-  }
-}
-
-// ── Filter ────────────────────────────────────────────────
+// ── Filter (load all) ─────────────────────────────────────
 async function doFilter() {
   const params = new URLSearchParams();
-  const city      = document.getElementById('f-city').value.trim();
-  const roomsMin  = document.getElementById('f-rooms-min').value;
-  const roomsMax  = document.getElementById('f-rooms-max').value;
-  const priceMin  = document.getElementById('f-price-min').value;
-  const priceMax  = document.getElementById('f-price-max').value;
-  const floor     = document.getElementById('f-floor').value;
-
-  if (city)     params.set('city', city);
-  if (roomsMin) params.set('min_rooms', roomsMin);
-  if (roomsMax) params.set('max_rooms', roomsMax);
-  if (priceMin) params.set('min_price', priceMin);
-  if (priceMax) params.set('max_price', priceMax);
-  if (floor)    params.set('floor', floor);
-
-  // broker
-  if (toggleState.direct === true) params.set('broker', 'false');
-  if (toggleState.broker === true) params.set('broker', 'true');
-
-  // for_rent filter — "למכירה" כולל גם NULL (לא ידוע), מוציא רק בטוח להשכרה
-  if (toggleState.sale === true) params.set('for_rent', 'false');
-  if (toggleState.rent === true) params.set('for_rent', 'true');
-
   if (activeTab === 'fresh') params.set('hours_fresh', '1');
 
   showLoading();
@@ -930,145 +712,90 @@ async function doFilter() {
     loadStats();
     if (activeTab === 'map' && map) updateMapPins(allCards);
   } catch(e) {
-    showError('שגיאה בטעינת נתונים: ' + e.message);
-  }
-}
-
-// ── Clear all ─────────────────────────────────────────────
-async function doClear() {
-  if (!confirm('למחוק את כל הדירות השמורות? לא ניתן לשחזר.')) return;
-  const btn = document.querySelector('.btn-delete');
-  btn.disabled = true;
-  try {
-    const r = await fetch(API + '/apartments', { method: 'DELETE' });
-    const data = await r.json();
-    if (!r.ok) throw new Error(data.detail || JSON.stringify(data));
-    alert(`נמחקו ${data.deleted} דירות`);
-    await doFilter();
-  } catch(e) {
-    alert('שגיאה: ' + e.message);
-  } finally {
-    btn.disabled = false;
+    showError('שגיאה: ' + e.message);
   }
 }
 
 // ── Scrape ────────────────────────────────────────────────
 async function doScrape() {
-  const btn = document.querySelector('.btn-scrape');
+  const btn = document.getElementById('btn-scrape');
   btn.disabled = true;
   btn.textContent = '⏳ סורק...';
   try {
-    const city = document.getElementById('f-city').value.trim();
-    const query = city ? `דירות למכירה ${city}` : 'דירות למכירה';
     const r = await fetch(API + '/apartments/scrape', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({query, max_results: 40})
+      body: JSON.stringify({query: 'דירות למכירה', max_results: 40})
     });
     const data = await r.json();
     if (!r.ok) throw new Error(data.detail || data.message || JSON.stringify(data));
     alert(data.message || `נסרקו ${data.scraped} דירות`);
-    // אחרי סריקה — מנקים פילטרים ומציגים הכל
-    document.getElementById('f-city').value = '';
-    // מאפסים סינון "סוג עסקה" כדי להציג את כל התוצאות
-    toggleState.sale = null;
-    toggleState.rent = null;
-    document.getElementById('pill-sale').classList.remove('active-yes');
-    document.getElementById('pill-rent').classList.remove('active-yes');
     await doFilter();
   } catch(e) {
     alert('שגיאה: ' + e.message);
   } finally {
     btn.disabled = false;
-    btn.textContent = '⬇ סרוק מפייסבוק';
+    btn.textContent = '⬇ סרוק מרקטפלייס';
   }
 }
 
-// ── Scrape Yad2 ──────────────────────────────────────────
-async function doScrapeYad2() {
-  const btn = document.querySelector('.btn-yad2');
-  btn.disabled = true;
-  btn.textContent = '⏳ מושך מיד2...';
+// ── Clear ─────────────────────────────────────────────────
+async function doClear() {
+  if (!confirm('למחוק את כל הדירות? לא ניתן לשחזר.')) return;
   try {
-    const city     = document.getElementById('f-city').value.trim() || null;
-    const roomsMin = parseFloat(document.getElementById('f-rooms-min').value) || null;
-    const roomsMax = parseFloat(document.getElementById('f-rooms-max').value) || null;
-    const priceMin = parseInt(document.getElementById('f-price-min').value)   || null;
-    const priceMax = parseInt(document.getElementById('f-price-max').value)   || null;
-    const forRent  = toggleState.rent === true ? true : toggleState.sale === true ? false : false;
-
-    const r = await fetch(API + '/apartments/scrape/yad2', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({
-        city, min_rooms: roomsMin, max_rooms: roomsMax,
-        min_price: priceMin, max_price: priceMax,
-        for_rent: forRent, max_results: 40
-      })
-    });
+    const r = await fetch(API + '/apartments', { method: 'DELETE' });
     const data = await r.json();
-    if (!r.ok) throw new Error(data.detail || data.message || JSON.stringify(data));
-    alert(data.message || `נסרקו ${data.scraped} דירות מיד2`);
+    if (!r.ok) throw new Error(data.detail);
     await doFilter();
-  } catch(e) {
-    alert('שגיאה: ' + e.message);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = '🏠 סרוק יד2';
-  }
+  } catch(e) { alert('שגיאה: ' + e.message); }
 }
 
-// ── Render ────────────────────────────────────────────────
+// ── Export CSV ─────────────────────────────────────────────
+function exportCSV() {
+  if (!allCards.length) { alert('אין נתונים לייצוא'); return; }
+  const headers = ['כותרת','מחיר','עיר','שכונה','חדרים','קומה','שטח מ"ר','סוג נכס','תיווך','ראשון נראה','קישור'];
+  const rows = allCards.map(c => [
+    c.title, c.price ?? '', c.city ?? '', c.neighborhood ?? '',
+    c.rooms ?? '', c.floor ?? '', c.size_sqm ?? '', c.property_type ?? '',
+    c.broker === true ? 'תיווך' : c.broker === false ? 'ישיר' : '',
+    c.first_seen ?? '', c.url ?? ''
+  ].map(v => `"${String(v).replace(/"/g,'""')}"`));
+  const csv = '﻿' + [headers, ...rows].map(r => r.join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = `דירות_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+}
+
+// ── Render cards ──────────────────────────────────────────
 function renderCards() {
   const panel = document.getElementById('results');
   let cards = [...allCards];
 
-  if (activeTab === 'changed') {
-    cards = cards.filter(c => c.price_change !== null && c.price_change !== 0);
-  }
-  if (activeTab === 'favorites') {
-    cards = cards.filter(c => favorites.has(c.listing_id));
-  }
+  if (activeTab === 'changed') cards = cards.filter(c => c.price_change !== null && c.price_change !== 0);
+  if (activeTab === 'favorites') cards = cards.filter(c => favorites.has(c.listing_id));
 
   const sort = document.getElementById('sort-by').value;
   cards.sort((a, b) => {
     if (sort === 'price_asc')  return (a.price ?? Infinity) - (b.price ?? Infinity);
     if (sort === 'price_desc') return (b.price ?? 0) - (a.price ?? 0);
     if (sort === 'rooms')      return (b.rooms ?? 0) - (a.rooms ?? 0);
+    if (sort === 'score')      return (b.score ?? 0) - (a.score ?? 0);
     if (sort === 'change')     return Math.abs(b.price_change ?? 0) - Math.abs(a.price_change ?? 0);
-    // date (default)
     return (b.last_updated ?? '').localeCompare(a.last_updated ?? '');
   });
 
   if (!cards.length) {
     const msgs = {
-      fresh:     '🕐 אין דירות חדשות מהשעה האחרונה — לחץ "סרוק מפייסבוק" כדי לחפש',
-      favorites: '❤️ עדיין אין מועדפים — לחץ על הלב בכרטיס כדי לשמור',
+      fresh:     '🕐 אין דירות חדשות מהשעה האחרונה',
+      favorites: '❤️ עדיין אין מועדפים',
+      changed:   '💰 אין שינויי מחיר',
     };
-    panel.innerHTML = `<div class="no-results">${msgs[activeTab] || 'לא נמצאו דירות התואמות את הסינון'}</div>`;
+    panel.innerHTML = `<div class="no-results">${msgs[activeTab] || '💬 לחץ על הצ\'אט ובקש ממני לחפש דירות'}<div class="hint">לחץ "⬇ סרוק מרקטפלייס" כדי למשוך דירות חדשות</div></div>`;
     return;
   }
-
   panel.innerHTML = cards.map(c => cardHTML(c)).join('');
 }
 
-function cleanPriceText(pt) {
-  if (!pt) return '–';
-  let cleaned = pt.replace(/\$US\s*/g,'').replace(/USD\s*/g,'').replace(/\$\s*/g,'').trim();
-  // Only add ₪ if the text doesn't already contain a currency marker
-  if (!cleaned.includes('₪') && !cleaned.includes('ש"ח') && !cleaned.includes('ILS')) {
-    cleaned += ' ₪';
-  }
-  return cleaned;
-}
-
-function isNew(firstSeen) {
-  if (!firstSeen) return false;
-  const t = new Date(firstSeen.replace(' ','T') + 'Z');
-  return (Date.now() - t.getTime()) < 60 * 60 * 1000;
-}
-
-// ── City averages ──────────────────────────────────────────
 function computeCityAverages(cards) {
   const map = {};
   for (const c of cards) {
@@ -1079,13 +806,11 @@ function computeCityAverages(cards) {
   }
   const avgs = {};
   for (const [city, prices] of Object.entries(map)) {
-    if (prices.length >= 2)
-      avgs[city] = prices.reduce((a, b) => a + b, 0) / prices.length;
+    if (prices.length >= 2) avgs[city] = prices.reduce((a,b) => a+b, 0) / prices.length;
   }
   return avgs;
 }
 
-// ── Smart score 1–10 ───────────────────────────────────────
 function smartScore(c) {
   let score = 5;
   if (c.price && c.city && cityAverages[c.city]) {
@@ -1102,7 +827,6 @@ function smartScore(c) {
   return Math.min(10, Math.max(1, Math.round(score)));
 }
 
-// ── Price analysis ─────────────────────────────────────────
 function priceAnalysis(c) {
   if (!c.price || !c.city || !cityAverages[c.city]) return '';
   const pct = Math.round((1 - c.price / cityAverages[c.city]) * 100);
@@ -1111,64 +835,53 @@ function priceAnalysis(c) {
   return `<span class="price-analysis price-expensive">↑ יקר ב-${Math.abs(pct)}% מממוצע ${esc(c.city)}</span>`;
 }
 
-// ── Favorites ──────────────────────────────────────────────
 function toggleFavorite(id, ev) {
   ev.stopPropagation();
   if (favorites.has(id)) favorites.delete(id);
   else favorites.add(id);
   localStorage.setItem('apt_favorites', JSON.stringify([...favorites]));
-  // Update just the heart button without full re-render
   const btn = document.querySelector(`#card-${CSS.escape(id)} .heart-btn`);
   if (btn) btn.textContent = favorites.has(id) ? '❤️' : '🤍';
   if (activeTab === 'favorites') renderCards();
 }
 
-// ── Export CSV ─────────────────────────────────────────────
-function exportCSV() {
-  if (!allCards.length) { alert('אין נתונים לייצוא'); return; }
-  const headers = ['כותרת','מחיר','מחיר טקסט','עיר','שכונה','חדרים','קומה','שטח מ"ר','סוג נכס','תיווך','להשכרה','ראשון נראה','קישור'];
-  const rows = allCards.map(c => [
-    c.title, c.price ?? '', c.price_text ?? '', c.city ?? '', c.neighborhood ?? '',
-    c.rooms ?? '', c.floor ?? '', c.size_sqm ?? '', c.property_type ?? '',
-    c.broker === true ? 'תיווך' : c.broker === false ? 'ישיר' : '',
-    c.for_rent === true ? 'השכרה' : c.for_rent === false ? 'מכירה' : '',
-    c.first_seen ?? '', c.url ?? ''
-  ].map(v => `"${String(v).replace(/"/g,'""')}"`));
+function isNew(firstSeen) {
+  if (!firstSeen) return false;
+  const t = new Date(firstSeen.replace(' ','T') + 'Z');
+  return (Date.now() - t.getTime()) < 60 * 60 * 1000;
+}
 
-  const csv = '﻿' + [headers, ...rows].map(r => r.join(',')).join('\n');
-  const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `דירות_${new Date().toISOString().slice(0,10)}.csv`;
-  a.click();
+function cleanPriceText(pt) {
+  if (!pt) return '–';
+  let cleaned = pt.replace(/\$US\s*/g,'').replace(/USD\s*/g,'').replace(/\$\s*/g,'').trim();
+  if (!cleaned.includes('₪') && !cleaned.includes('ש"ח') && !cleaned.includes('ILS')) cleaned += ' ₪';
+  return cleaned;
 }
 
 function cardHTML(c) {
-  // Use server-side AI score if available, otherwise fall back to client-side smartScore
   const score = (c.score != null) ? Math.round(c.score) : smartScore(c);
   const scoreCls = score >= 7 ? 'score-high' : score >= 5 ? 'score-medium' : 'score-low';
-  const scoreTitle = c.score != null ? `ציון AI: ${c.score.toFixed(1)}` : 'ציון חכם';
   const newBadge = isNew(c.first_seen) ? '<span class="badge-new">NEW</span>' : '';
   const heartIcon = favorites.has(c.listing_id) ? '❤️' : '🤍';
   const priceStr = c.price ? fmtPrice(c.price) + ' ₪' : cleanPriceText(c.price_text);
+
   let changeHTML = '';
   if (c.price_change !== null && c.price_change !== 0) {
-    const sign  = c.price_change < 0 ? '↓' : '↑';
-    const cls   = c.price_change < 0 ? 'price-down' : 'price-up';
-    const pct   = c.price_change_pct !== null ? ` (${c.price_change_pct}%)` : '';
+    const sign = c.price_change < 0 ? '↓' : '↑';
+    const cls  = c.price_change < 0 ? 'price-down' : 'price-up';
+    const pct  = c.price_change_pct !== null ? ` (${c.price_change_pct}%)` : '';
     changeHTML = `<span class="price-change ${cls}">${sign}${Math.abs(c.price_change).toLocaleString()}${pct}</span>`;
   }
 
   const tags = [];
-  if (c.rooms)          tags.push(formatRooms(c.rooms));
-  if (c.city)           tags.push(c.city);
-  if (c.neighborhood)   tags.push(c.neighborhood);
-  if (c.floor != null)  tags.push(c.floor === 0 ? 'קרקע' : `קומה ${c.floor}`);
-  if (c.size_sqm)       tags.push(`${c.size_sqm} מ"ר`);
-  if (c.property_type)  tags.push(c.property_type);
+  if (c.rooms)         tags.push(formatRooms(c.rooms));
+  if (c.city)          tags.push(c.city);
+  if (c.neighborhood)  tags.push(c.neighborhood);
+  if (c.floor != null) tags.push(c.floor === 0 ? 'קרקע' : `קומה ${c.floor}`);
+  if (c.size_sqm)      tags.push(`${c.size_sqm} מ"ר`);
+  if (c.property_type) tags.push(c.property_type);
 
-  const pricePerSqm = (c.price && c.size_sqm && c.size_sqm > 0)
-    ? Math.round(c.price / c.size_sqm) : null;
+  const pricePerSqm = (c.price && c.size_sqm && c.size_sqm > 0) ? Math.round(c.price / c.size_sqm) : null;
 
   let brokerTag = '';
   if (c.broker === true)  brokerTag = '<span class="tag broker">תיווך</span>';
@@ -1178,39 +891,25 @@ function cardHTML(c) {
   if (c.for_rent === true)  txTag = '<span class="tag rent">השכרה</span>';
   if (c.for_rent === false) txTag = '<span class="tag sale">מכירה</span>';
 
-  const isYad2 = String(c.listing_id).startsWith('yad2_');
-  const srcTag = isYad2
-    ? '<span class="tag src-yad2">יד2</span>'
-    : '<span class="tag src-fb">FB</span>';
-
-  const sqmTag = pricePerSqm
-    ? `<span class="tag sqm">${fmtPrice(pricePerSqm)} ₪/מ"ר</span>`
-    : '';
-
-  const brokerSuspectTag = c.is_broker_suspect
-    ? '<span class="tag broker-suspect">⚠ חשד תיווך</span>'
-    : '';
-
-  const entryDateTag = c.entry_date
-    ? `<span class="tag entry-date">📅 ${esc(c.entry_date)}</span>`
-    : '';
-  const tagsHTML = tags.map(t => `<span class="tag">${esc(t)}</span>`).join('') + brokerTag + txTag + srcTag + sqmTag + brokerSuspectTag + entryDateTag;
+  const sqmTag = pricePerSqm ? `<span class="tag sqm">${fmtPrice(pricePerSqm)} ₪/מ"ר</span>` : '';
+  const brokerSuspectTag = c.is_broker_suspect ? '<span class="tag broker-suspect">⚠ חשד תיווך</span>' : '';
+  const entryDateTag = c.entry_date ? `<span class="tag entry-date">📅 ${esc(c.entry_date)}</span>` : '';
+  const tagsHTML = tags.map(t => `<span class="tag">${esc(t)}</span>`).join('') +
+    brokerTag + txTag + '<span class="tag src-fb">FB</span>' + sqmTag + brokerSuspectTag + entryDateTag;
 
   const scoreReasonHTML = c.score_reason
-    ? `<div class="score-reason">💬 ${esc(c.score_reason)}</div>`
-    : '';
+    ? `<div class="score-reason">💬 ${esc(c.score_reason)}</div>` : '';
 
   const photoHTML = c.photo_url
-    ? `<div class="card-photo"><img src="${esc(c.photo_url)}" alt="" loading="lazy" onerror="this.parentElement.style.display='none'"></div>`
-    : '';
+    ? `<div class="card-photo"><img src="${esc(c.photo_url)}" alt="" loading="lazy" onerror="this.parentElement.style.display='none'"></div>` : '';
 
   return `
   <div class="card" id="card-${esc(c.listing_id)}" onclick="toggleCard('${esc(c.listing_id)}',this)">
     ${photoHTML}
     <div class="card-top">
-      <span class="score-badge ${scoreCls}" title="${esc(scoreTitle)}">${score}</span>
-      <span class="card-title" style="flex:1">${newBadge}${esc(c.title || '–')}</span>
-      <button class="heart-btn" onclick="toggleFavorite('${esc(c.listing_id)}',event)" title="הוסף למועדפים">${heartIcon}</button>
+      <span class="score-badge ${scoreCls}" title="ציון AI: ${score}">${score}</span>
+      <span class="card-title">${newBadge}${esc(c.title || '–')}</span>
+      <button class="heart-btn" onclick="toggleFavorite('${esc(c.listing_id)}',event)">${ heartIcon}</button>
       <span class="card-price">${priceStr} ${changeHTML}</span>
     </div>
     <div class="card-tags">${tagsHTML}</div>
@@ -1218,7 +917,7 @@ function cardHTML(c) {
     <div class="card-detail" id="detail-${esc(c.listing_id)}">
       ${scoreReasonHTML}
       <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:8px;font-size:0.82rem;color:var(--text-muted)">
-        ${c.price    ? `<span>💰 <b style="color:var(--accent2)">${c.price ? fmtPrice(c.price)+' ₪' : ''}</b></span>` : ''}
+        ${c.price    ? `<span>💰 <b style="color:var(--accent2)">${fmtPrice(c.price)} ₪</b></span>` : ''}
         ${c.city     ? `<span>📍 <b>${esc(c.city)}${c.neighborhood ? ' — '+esc(c.neighborhood) : ''}</b></span>` : ''}
         ${c.rooms    ? `<span>🛏 <b>${formatRooms(c.rooms)}</b></span>` : ''}
         ${c.floor != null ? `<span>🏢 <b>${c.floor === 0 ? 'קרקע' : 'קומה '+c.floor}${c.total_floors ? '/'+c.total_floors : ''}</b></span>` : ''}
@@ -1237,30 +936,18 @@ function cardHTML(c) {
 async function toggleCard(id, el) {
   const detail = document.getElementById('detail-' + id);
   if (!detail) return;
-
-  if (el.classList.contains('open')) {
-    el.classList.remove('open');
-    return;
-  }
-
-  // Close others
+  if (el.classList.contains('open')) { el.classList.remove('open'); return; }
   document.querySelectorAll('.card.open').forEach(c => c.classList.remove('open'));
   el.classList.add('open');
-
-  // Load history
   if (!historyCache[id]) {
     try {
       const r = await fetch(API + '/apartments/history/' + encodeURIComponent(id));
-      if (!r.ok) throw new Error(r.status);
-      historyCache[id] = await r.json();
+      historyCache[id] = r.ok ? await r.json() : [];
     } catch(e) { historyCache[id] = []; }
   }
   const hist = historyCache[id];
   const histEl = document.getElementById('hist-' + id);
-  if (!hist.length) {
-    histEl.textContent = 'אין היסטוריה';
-    return;
-  }
+  if (!hist.length) { histEl.textContent = 'אין היסטוריה'; return; }
   histEl.innerHTML = `
     <table class="history-table">
       <tr><th>תאריך</th><th>מחיר ₪</th></tr>
@@ -1284,9 +971,8 @@ async function sendChat() {
 
   const typing = document.getElementById('chat-typing');
   typing.style.display = 'block';
-
-  let assistantMsg = '';
   const msgEl = appendMsg('assistant', '');
+  let assistantMsg = '';
 
   try {
     const resp = await fetch(API + '/chat/stream', {
@@ -1294,11 +980,7 @@ async function sendChat() {
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({messages: chatHistory})
     });
-
-    if (!resp.ok) {
-      const errText = await resp.text();
-      throw new Error(`שגיאת שרת ${resp.status}: ${errText}`);
-    }
+    if (!resp.ok) throw new Error(`שגיאת שרת ${resp.status}`);
 
     const reader = resp.body.getReader();
     const dec = new TextDecoder();
@@ -1308,8 +990,7 @@ async function sendChat() {
       const {done, value} = await reader.read();
       if (done) break;
       buf += dec.decode(value, {stream: true});
-      const lines = buf.split('\n');
-      buf = lines.pop();
+      const lines = buf.split('\n'); buf = lines.pop();
       for (const line of lines) {
         if (!line.startsWith('data: ')) continue;
         const raw = line.slice(6);
@@ -1318,7 +999,7 @@ async function sendChat() {
           const ev = JSON.parse(raw);
           if (ev.type === 'text') {
             assistantMsg += ev.text;
-            msgEl.textContent = assistantMsg;
+            msgEl.innerHTML = assistantMsg.replace(/\n/g, '<br>');
             scrollChat();
           } else if (ev.type === 'tool_call') {
             appendMsg('tool-info', `⚙ ${ev.name}(${JSON.stringify(ev.input)})`);
@@ -1332,10 +1013,7 @@ async function sendChat() {
   }
 
   typing.style.display = 'none';
-  if (assistantMsg) {
-    chatHistory.push({role:'assistant', content: assistantMsg});
-  }
-  // Refresh listings after agent might have scraped
+  if (assistantMsg) chatHistory.push({role:'assistant', content: assistantMsg});
   doFilter();
 }
 
@@ -1348,17 +1026,81 @@ function appendMsg(role, text) {
   scrollChat();
   return el;
 }
-
 function scrollChat() {
   const box = document.getElementById('chat-messages');
   box.scrollTop = box.scrollHeight;
 }
 
-// ── Helpers ────────────────────────────────────────────────
-function fmtPrice(n) {
-  return Number(n).toLocaleString('he-IL');
+// ── Map ───────────────────────────────────────────────────
+let map = null;
+let mapMarkers = [];
+
+const CITY_COORDS = {
+  'תל אביב':[32.0853,34.7818],'יפו':[32.0480,34.7500],'ירושלים':[31.7683,35.2137],
+  'חיפה':[32.7940,34.9896],'ראשון לציון':[31.9730,34.7925],'פתח תקווה':[32.0878,34.8878],
+  'אשדוד':[31.8044,34.6553],'נתניה':[32.3215,34.8532],'באר שבע':[31.2520,34.7915],
+  'בני ברק':[32.0840,34.8336],'רמת גן':[32.0694,34.8239],'הרצליה':[32.1667,34.8500],
+  'כפר סבא':[32.1754,34.9077],'מודיעין':[31.8969,35.0109],'חולון':[32.0109,34.7797],
+  'רחובות':[31.8953,34.8078],'בת ים':[32.0228,34.7509],'רעננה':[32.1839,34.8703],
+  'הוד השרון':[32.1508,34.8953],'גבעתיים':[32.0713,34.8118],'גבעת שמואל':[32.0807,34.8475],
+  'קריית גת':[31.6085,34.7636],'אשקלון':[31.6687,34.5742],'לוד':[31.9515,34.8956],
+  'רמלה':[31.9278,34.8739],'נס ציונה':[31.9299,34.8004],'אור יהודה':[32.0262,34.8564],
+  'יבנה':[31.8762,34.7449],'רמת השרון':[32.1430,34.8390],'אילת':[29.5577,34.9519],
+  'עפולה':[32.6071,35.2904],'נהריה':[33.0050,35.0979],'טבריה':[32.7922,35.5312],
+  'צפת':[32.9646,35.4956],'עכו':[32.9228,35.0753],'כרמיאל':[32.9133,35.2968],
+  'קריית ביאליק':[32.8333,35.0893],'קריית אתא':[32.8074,35.1065],
+  'ביתר עילית':[31.6950,35.1197],'מודיעין עילית':[31.9313,35.0444],
+  'אלעד':[32.0513,34.9500],'מעלה אדומים':[31.7722,35.2994],
+  'זכרון יעקב':[32.5700,34.9560],'פרדס חנה':[32.4706,34.9697],
+};
+
+function initMap() {
+  if (map) return;
+  map = L.map('map-container', { zoomControl: true }).setView([31.8, 34.9], 8);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap', maxZoom: 18,
+  }).addTo(map);
 }
 
+function updateMapPins(cards) {
+  if (!map) return;
+  mapMarkers.forEach(m => m.remove()); mapMarkers = [];
+  const cityOffset = {};
+  for (const c of cards) {
+    const coords = c.city ? CITY_COORDS[c.city] : null;
+    if (!coords) continue;
+    cityOffset[c.city] = (cityOffset[c.city] || 0) + 1;
+    const idx = cityOffset[c.city];
+    const angle = idx * 2.4, r = Math.min(idx * 0.003, 0.025);
+    const lat = coords[0] + r * Math.sin(angle), lng = coords[1] + r * Math.cos(angle);
+    const score = c.score != null ? c.score : smartScore(c);
+    const sc = score >= 7 ? '#4ecca3' : score >= 5 ? '#ffd166' : '#ff6b6b';
+    const sb = score >= 7 ? '#0d2b1e' : score >= 5 ? '#2b2100' : '#2b0d0d';
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="background:${sb};border:2px solid ${sc};border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;color:${sc};box-shadow:0 2px 10px rgba(0,0,0,.5)">${Math.round(score)}</div>`,
+      iconSize: [32,32], iconAnchor: [16,16], popupAnchor: [0,-18],
+    });
+    const price = c.price ? fmtPrice(c.price) + ' ₪' : cleanPriceText(c.price_text);
+    const meta = [c.rooms ? formatRooms(c.rooms) : '', c.floor != null ? (c.floor===0?'קרקע':`קומה ${c.floor}`) : '', c.city, c.neighborhood].filter(Boolean).join(' · ');
+    const photo = c.photo_url ? `<img src="${esc(c.photo_url)}" style="width:100%;height:110px;object-fit:cover;border-radius:6px;margin-bottom:8px;display:block">` : '';
+    const phoneBtn = c.phone ? `<a href="tel:${esc(c.phone)}" style="display:inline-block;margin-top:6px;padding:3px 10px;background:#0d2b1e;border:1px solid #4ecca3;color:#4ecca3;border-radius:12px;font-size:0.78rem;text-decoration:none">📞 ${esc(c.phone)}</a>` : '';
+    const popup = `<div dir="rtl" style="font-family:'Segoe UI',Arial,sans-serif;min-width:200px;max-width:250px">
+      ${photo}
+      <div style="font-weight:600;font-size:0.88rem;margin-bottom:4px">${esc(c.title||'')}</div>
+      <div style="color:#4ecca3;font-weight:700;font-size:1.05rem">${price}</div>
+      <div style="color:#7c85a2;font-size:0.78rem;margin-top:3px">${meta}</div>
+      ${phoneBtn}
+      <a href="${esc(c.url)}" target="_blank" style="color:#6c63ff;font-size:0.78rem;display:block;margin-top:8px">פתח במרקטפלייס ↗</a>
+    </div>`;
+    const marker = L.marker([lat,lng],{icon}).addTo(map);
+    marker.bindPopup(popup, {maxWidth:270, minWidth:200});
+    mapMarkers.push(marker);
+  }
+}
+
+// ── Helpers ────────────────────────────────────────────────
+function fmtPrice(n) { return Number(n).toLocaleString('he-IL'); }
 function formatRooms(r) {
   if (!r) return '';
   const n = Number(r);
@@ -1367,121 +1109,13 @@ function formatRooms(r) {
   return whole > 0 ? `${whole}½ חד׳` : '½ חד׳';
 }
 function esc(s) {
-  return String(s ?? '')
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 function showLoading() {
-  document.getElementById('results').innerHTML =
-    '<div class="no-results"><span class="spinner"></span> טוען...</div>';
+  document.getElementById('results').innerHTML = '<div class="no-results"><span class="spinner"></span> טוען...</div>';
 }
 function showError(msg) {
-  document.getElementById('results').innerHTML =
-    `<div class="no-results" style="color:var(--red)">${esc(msg)}</div>`;
-}
-
-// ── Map ───────────────────────────────────────────────────
-let map = null;
-let mapMarkers = [];
-
-const CITY_COORDS = {
-  'תל אביב':        [32.0853, 34.7818], 'יפו':            [32.0480, 34.7500],
-  'ירושלים':        [31.7683, 35.2137], 'חיפה':           [32.7940, 34.9896],
-  'ראשון לציון':    [31.9730, 34.7925], 'פתח תקווה':      [32.0878, 34.8878],
-  'אשדוד':          [31.8044, 34.6553], 'נתניה':          [32.3215, 34.8532],
-  'באר שבע':        [31.2520, 34.7915], 'בני ברק':        [32.0840, 34.8336],
-  'רמת גן':         [32.0694, 34.8239], 'הרצליה':         [32.1667, 34.8500],
-  'כפר סבא':        [32.1754, 34.9077], 'מודיעין':        [31.8969, 35.0109],
-  'חולון':          [32.0109, 34.7797], 'רחובות':         [31.8953, 34.8078],
-  'בת ים':          [32.0228, 34.7509], 'רעננה':          [32.1839, 34.8703],
-  'הוד השרון':      [32.1508, 34.8953], 'גבעתיים':        [32.0713, 34.8118],
-  'גבעת שמואל':     [32.0807, 34.8475], 'קריית גת':       [31.6085, 34.7636],
-  'אשקלון':         [31.6687, 34.5742], 'לוד':            [31.9515, 34.8956],
-  'רמלה':           [31.9278, 34.8739], 'נס ציונה':       [31.9299, 34.8004],
-  'אור יהודה':      [32.0262, 34.8564], 'יבנה':           [31.8762, 34.7449],
-  'רמת השרון':      [32.1430, 34.8390], 'אילת':           [29.5577, 34.9519],
-  'עפולה':          [32.6071, 35.2904], 'נהריה':          [33.0050, 35.0979],
-  'טבריה':          [32.7922, 35.5312], 'צפת':            [32.9646, 35.4956],
-  'עכו':            [32.9228, 35.0753], 'כרמיאל':         [32.9133, 35.2968],
-  'קריית ביאליק':   [32.8333, 35.0893], 'קריית אתא':      [32.8074, 35.1065],
-  'קריית מוצקין':   [32.8333, 35.0750], 'קריית שמונה':    [33.2072, 35.5700],
-  'דימונה':         [31.0674, 35.0330], 'ערד':            [31.2580, 35.2134],
-  'מגדל העמק':      [32.6760, 35.2377], 'בית שאן':        [32.5031, 35.4944],
-  'ביתר עילית':     [31.6950, 35.1197], 'מודיעין עילית':  [31.9313, 35.0444],
-  'אלעד':           [32.0513, 34.9500], 'מעלה אדומים':    [31.7722, 35.2994],
-  'זכרון יעקב':     [32.5700, 34.9560], 'פרדס חנה':       [32.4706, 34.9697],
-  'קריית ים':       [32.8500, 35.0667], 'שפרעם':          [32.8044, 35.1706],
-  'כפר יונה':       [32.3085, 34.9357], 'יהוד':           [32.0306, 34.8881],
-  'אבן יהודה':      [32.2722, 34.8897], 'כפר סבא':        [32.1754, 34.9077],
-  'רמת ישי':        [32.7044, 35.1697], 'עראבה':          [32.8508, 35.3319],
-};
-
-function initMap() {
-  if (map) return;
-  map = L.map('map-container', { zoomControl: true }).setView([31.8, 34.9], 8);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap',
-    maxZoom: 18,
-  }).addTo(map);
-}
-
-function updateMapPins(cards) {
-  if (!map) return;
-  mapMarkers.forEach(m => m.remove());
-  mapMarkers = [];
-
-  const cityOffset = {};  // track how many pins per city for jitter
-  for (const c of cards) {
-    const coords = c.city ? CITY_COORDS[c.city] : null;
-    if (!coords) continue;
-
-    const key = c.city;
-    cityOffset[key] = (cityOffset[key] || 0) + 1;
-    const idx = cityOffset[key];
-    // Spiral jitter so pins don't stack
-    const angle = idx * 2.4;
-    const r = Math.min(idx * 0.003, 0.025);
-    const lat = coords[0] + r * Math.sin(angle);
-    const lng = coords[1] + r * Math.cos(angle);
-
-    const score = c.score != null ? c.score : smartScore(c);
-    const scoreColor = score >= 7 ? '#4ecca3' : score >= 5 ? '#ffd166' : '#ff6b6b';
-    const scoreBg    = score >= 7 ? '#0d2b1e' : score >= 5 ? '#2b2100' : '#2b0d0d';
-
-    const icon = L.divIcon({
-      className: '',
-      html: `<div style="background:${scoreBg};border:2px solid ${scoreColor};border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;color:${scoreColor};box-shadow:0 2px 10px rgba(0,0,0,.5);cursor:pointer">${Math.round(score)}</div>`,
-      iconSize: [32, 32], iconAnchor: [16, 16], popupAnchor: [0, -18],
-    });
-
-    const price = c.price ? fmtPrice(c.price) + ' ₪' : cleanPriceText(c.price_text);
-    const rooms = c.rooms ? formatRooms(c.rooms) : '';
-    const floor = c.floor != null ? (c.floor === 0 ? 'קרקע' : `קומה ${c.floor}`) : '';
-    const meta  = [rooms, floor, c.city, c.neighborhood].filter(Boolean).join(' · ');
-    const photo = c.photo_url
-      ? `<img src="${esc(c.photo_url)}" style="width:100%;height:110px;object-fit:cover;border-radius:6px;margin-bottom:8px;display:block">`
-      : '';
-    const phoneBtn = c.phone
-      ? `<a href="tel:${esc(c.phone)}" style="display:inline-block;margin-top:6px;padding:3px 10px;background:#0d2b1e;border:1px solid #4ecca3;color:#4ecca3;border-radius:12px;font-size:0.78rem;text-decoration:none">📞 ${esc(c.phone)}</a>`
-      : '';
-
-    const popup = `<div dir="rtl" style="font-family:'Segoe UI',Arial,sans-serif;min-width:200px;max-width:250px">
-      ${photo}
-      <div style="font-weight:600;font-size:0.88rem;margin-bottom:4px;line-height:1.4">${esc(c.title || '')}</div>
-      <div style="color:#4ecca3;font-weight:700;font-size:1.05rem">${price}</div>
-      <div style="color:#7c85a2;font-size:0.78rem;margin-top:3px">${meta}</div>
-      ${phoneBtn}
-      <a href="${esc(c.url)}" target="_blank" style="color:#6c63ff;font-size:0.78rem;display:block;margin-top:8px">פתח במרקטפלייס ↗</a>
-    </div>`;
-
-    const marker = L.marker([lat, lng], { icon }).addTo(map);
-    marker.bindPopup(popup, { maxWidth: 270, minWidth: 200 });
-    mapMarkers.push(marker);
-  }
-
-  // Show count
-  const withCoords = cards.filter(c => c.city && CITY_COORDS[c.city]).length;
-  console.log(`[map] ${withCoords}/${cards.length} apartments placed on map`);
+  document.getElementById('results').innerHTML = `<div class="no-results" style="color:var(--red)">${esc(msg)}</div>`;
 }
 </script>
 </body>
