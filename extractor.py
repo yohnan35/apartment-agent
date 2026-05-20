@@ -81,7 +81,7 @@ def bulk_extract(listings: list[dict]) -> list[dict[str, Any]]:
     )
 
     response = client.messages.create(
-        model="claude-haiku-4-5-20251001",
+        model="claude-haiku-4-5",
         max_tokens=8192,
         system=SYSTEM_PROMPT,
         messages=[{"role": "user", "content": user_msg}],
@@ -101,6 +101,10 @@ def bulk_extract(listings: list[dict]) -> list[dict[str, Any]]:
         if isinstance(parsed, list):
             # Pad or truncate to match input length
             result = (parsed + [{}] * len(listings))[: len(listings)]
+            # Apply query hint: if scraper knows it's a sale query, set for_rent=False when null
+            for i, (r, l) in enumerate(zip(result, listings)):
+                if r.get("for_rent") is None and "_query_hint_for_rent" in l:
+                    result[i] = {**r, "for_rent": l["_query_hint_for_rent"]}
             return result
         # Wrapped in a key?
         for v in parsed.values():
@@ -122,7 +126,7 @@ def _extract_single_fallback(client: anthropic.Anthropic, listing: dict) -> dict
         f"תיאור: {listing.get('description','')}"
     )
     resp = client.messages.create(
-        model="claude-haiku-4-5-20251001",
+        model="claude-haiku-4-5",
         max_tokens=512,
         system=SYSTEM_PROMPT,
         messages=[{"role": "user", "content": text}],

@@ -4,7 +4,7 @@ SQLite storage for apartment listings and price history.
 import os
 import sqlite3
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Generator, Optional
 
@@ -114,7 +114,7 @@ def upsert_apartment(listing: dict, extracted: dict) -> None:
     Insert or update an apartment.
     Records a price_history entry whenever price changes.
     """
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
     lid = listing["listing_id"]
 
     def _bool(v) -> Optional[int]:

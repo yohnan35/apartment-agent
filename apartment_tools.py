@@ -17,6 +17,11 @@ def scrape_apartments(query: str = "דירה", max_results: int = 40) -> dict[st
     if not listings:
         return {"scraped": 0, "stored": 0, "message": "לא נמצאו תוצאות"}
 
+    # העבר hint לextractor: אם ה-query כולל "למכירה" → for_rent=false
+    is_sale = "למכירה" in query
+    for l in listings:
+        l["_query_hint_for_rent"] = False if is_sale else None
+
     extracted_list = extractor.bulk_extract(listings)
 
     # Score all listings in one API call

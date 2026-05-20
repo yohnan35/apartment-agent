@@ -70,8 +70,9 @@ async def scrape(query: str = "דירות למכירה", max_results: int = 40) 
             await stealth_async(page)
         try:
             listings = await _scrape_page(page, query, max_results)
-            # Save updated cookies back to DB to keep session fresh
-            await _save_session(ctx)
+            # Save updated cookies only if scrape succeeded (prevents session degradation)
+            if listings:
+                await _save_session(ctx)
         finally:
             await browser.close()
     return listings
@@ -209,6 +210,7 @@ async def _scrape_page(page: Page, query: str, max_results: int) -> list[dict]:
     search_url = (
         f"{MARKETPLACE_BASE}/search/"
         f"?query={quote(query)}"
+        f"&category_id=propertyrentals"
         f"&locale=he_IL"
     )
 
