@@ -103,8 +103,10 @@ def bulk_extract(listings: list[dict]) -> list[dict[str, Any]]:
             result = (parsed + [{}] * len(listings))[: len(listings)]
             # Apply query hint: if scraper knows it's a sale query, set for_rent=False when null
             for i, (r, l) in enumerate(zip(result, listings)):
-                if r.get("for_rent") is None and "_query_hint_for_rent" in l:
-                    result[i] = {**r, "for_rent": l["_query_hint_for_rent"]}
+                hint = l.get("_query_hint_for_rent")
+                if hint is not None and "_query_hint_for_rent" in l:
+                    # Always override — we know from the query what type this is
+                    result[i] = {**r, "for_rent": hint}
             return result
         # Wrapped in a key?
         for v in parsed.values():
