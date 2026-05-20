@@ -553,7 +553,7 @@
       <label>סוג עסקה</label>
       <div class="toggle-group">
         <div class="toggle-pill" id="pill-rent"   onclick="togglePill('rent'  )">להשכרה</div>
-        <div class="toggle-pill active-yes" id="pill-sale" onclick="togglePill('sale')">למכירה</div>
+        <div class="toggle-pill" id="pill-sale" onclick="togglePill('sale')">למכירה</div>
       </div>
     </div>
 
@@ -635,7 +635,7 @@ const API = '';  // same origin
 // ── State ─────────────────────────────────────────────────
 let allCards = [];
 let activeTab = 'all';
-let toggleState = { rent: null, sale: true, direct: null, broker: null };
+let toggleState = { rent: null, sale: null, direct: null, broker: null };
 let chatHistory = [];
 let openCardId = null;
 let historyCache = {};
@@ -968,8 +968,13 @@ async function doScrape() {
     const data = await r.json();
     if (!r.ok) throw new Error(data.detail || data.message || JSON.stringify(data));
     alert(data.message || `נסרקו ${data.scraped} דירות`);
-    // אחרי סריקה — מנקים את פילטר העיר ומציגים את כל התוצאות החדשות
+    // אחרי סריקה — מנקים פילטרים ומציגים הכל
     document.getElementById('f-city').value = '';
+    // מאפסים סינון "סוג עסקה" כדי להציג את כל התוצאות
+    toggleState.sale = null;
+    toggleState.rent = null;
+    document.getElementById('pill-sale').classList.remove('active-yes');
+    document.getElementById('pill-rent').classList.remove('active-yes');
     await doFilter();
   } catch(e) {
     alert('שגיאה: ' + e.message);
