@@ -364,6 +364,33 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
+  /* ── Skeleton loader ────────────────────────────────────── */
+  @keyframes shimmer {
+    0%   { background-position: -400px 0; }
+    100% { background-position:  400px 0; }
+  }
+  .skel {
+    background: linear-gradient(90deg, var(--bg3) 25%, #2e3655 50%, var(--bg3) 75%);
+    background-size: 400px 100%;
+    animation: shimmer 1.4s ease-in-out infinite;
+    border-radius: 4px;
+  }
+  .skeleton-card {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px 16px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .skel-row  { display: flex; align-items: center; gap: 10px; }
+  .skel-tags { display: flex; gap: 6px; }
+
+  /* ── Card error fallback ────────────────────────────────── */
+  .card-error {
+    background: var(--bg2); border: 1px dashed var(--red);
+    border-radius: var(--radius); padding: 12px 16px;
+    color: var(--text-muted); font-size: 0.8rem;
+    display: flex; align-items: center; gap: 8px;
+  }
+
   ::-webkit-scrollbar { width: 5px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
@@ -705,14 +732,34 @@ async function doFilter() {
 
   showLoading();
   try {
-    const r = await fetch(API + '/apartments?' + params.toString());
-    allCards = await r.json();
+    const r = await fetch(API + '/apartments?' + params.toString(), {
+      headers: { 'Accept': 'application/json; charset=utf-8' }
+    });
+    if (!r.ok) throw new Error(`HTTP ${r.status}: ${r.statusText}`);
+
+    const raw = await r.text();                     // read as text first
+    let data;
+    try {
+      data = JSON.parse(raw);                        // explicit UTF-8 parse
+    } catch(parseErr) {
+      console.error('[doFilter] JSON parse error:', parseErr, raw.slice(0, 200));
+      throw new Error('שגיאת פענוח JSON מהשרת');
+    }
+
+    if (!Array.isArray(data)) {
+      console.error('[doFilter] expected array, got:', typeof data, data);
+      throw new Error('תגובת שרת לא תקינה (לא מערך)');
+    }
+
+    allCards = data;
+    console.log(`[doFilter] received ${allCards.length} apartments`, allCards[0] || 'empty');
     cityAverages = computeCityAverages(allCards);
     renderCards();
     loadStats();
     if (activeTab === 'map' && map) updateMapPins(allCards);
   } catch(e) {
-    showError('שגיאה: ' + e.message);
+    console.error('[doFilter] error:', e);
+    showError('שגיאה בטעינת נתונים: ' + e.message);
   }
 }
 
@@ -793,7 +840,19 @@ function renderCards() {
     panel.innerHTML = `<div class="no-results">${msgs[activeTab] || '💬 לחץ על הצ\'אט ובקש ממני לחפש דירות'}<div class="hint">לחץ "⬇ סרוק מרקטפלייס" כדי למשוך דירות חדשות</div></div>`;
     return;
   }
-  panel.innerHTML = cards.map(c => cardHTML(c)).join('');
+
+  // Render each card with individual error fallback
+  const htmlParts = cards.map(c => {
+    try {
+      if (!c || typeof c !== 'object') throw new Error('invalid card object');
+      return cardHTML(c);
+    } catch(err) {
+      console.error('[renderCards] card error:', err, c);
+      const title = String(c?.title || c?.listing_id || 'מודעה').slice(0, 60);
+      return `<div class="card-error">⚠️ שגיאה בהצגת כרטיס: ${esc(title)}</div>`;
+    }
+  });
+  panel.innerHTML = htmlParts.join('');
 }
 
 function computeCityAverages(cards) {
@@ -859,74 +918,93 @@ function cleanPriceText(pt) {
 }
 
 function cardHTML(c) {
-  const score = (c.score != null) ? Math.round(c.score) : smartScore(c);
+  // ── Defensive field extraction ───────────────────────────
+  const id        = String(c.listing_id ?? '');
+  const title     = String(c.title     ?? '').trim() || 'מודעה ללא כותרת';
+  const url       = String(c.url       ?? '#');
+  const descRaw   = String(c.description ?? '');
+  const cityStr   = c.city        ? String(c.city)        : '';
+  const neighStr  = c.neighborhood? String(c.neighborhood): '';
+  const priceNum  = (c.price != null && !isNaN(Number(c.price))) ? Number(c.price) : null;
+  const priceTextRaw = c.price_text ? String(c.price_text) : '';
+  const roomsNum  = (c.rooms  != null) ? Number(c.rooms)  : null;
+  const floorNum  = (c.floor  != null) ? Number(c.floor)  : null;
+  const totalFlrs = (c.total_floors != null) ? Number(c.total_floors) : null;
+  const sqmNum    = (c.size_sqm != null) ? Number(c.size_sqm) : null;
+  const propType  = c.property_type ? String(c.property_type) : '';
+  const entryDate = c.entry_date  ? String(c.entry_date)  : '';
+  const phone     = c.phone       ? String(c.phone)       : '';
+  const photoUrl  = c.photo_url   ? String(c.photo_url)   : '';
+  const scoreRaw  = c.score_reason? String(c.score_reason): '';
+
+  const score    = (c.score != null && !isNaN(Number(c.score))) ? Math.round(Number(c.score)) : smartScore(c);
   const scoreCls = score >= 7 ? 'score-high' : score >= 5 ? 'score-medium' : 'score-low';
   const newBadge = isNew(c.first_seen) ? '<span class="badge-new">NEW</span>' : '';
-  const heartIcon = favorites.has(c.listing_id) ? '❤️' : '🤍';
-  const priceStr = c.price ? fmtPrice(c.price) + ' ₪' : cleanPriceText(c.price_text);
+  const heartIcon = favorites.has(id) ? '❤️' : '🤍';
+  const priceStr  = priceNum ? fmtPrice(priceNum) + ' ₪' : cleanPriceText(priceTextRaw);
 
   let changeHTML = '';
-  if (c.price_change !== null && c.price_change !== 0) {
-    const sign = c.price_change < 0 ? '↓' : '↑';
-    const cls  = c.price_change < 0 ? 'price-down' : 'price-up';
-    const pct  = c.price_change_pct !== null ? ` (${c.price_change_pct}%)` : '';
-    changeHTML = `<span class="price-change ${cls}">${sign}${Math.abs(c.price_change).toLocaleString()}${pct}</span>`;
+  const chg = (c.price_change != null && !isNaN(Number(c.price_change))) ? Number(c.price_change) : null;
+  if (chg !== null && chg !== 0) {
+    const sign = chg < 0 ? '↓' : '↑';
+    const cls  = chg < 0 ? 'price-down' : 'price-up';
+    const pct  = (c.price_change_pct != null) ? ` (${c.price_change_pct}%)` : '';
+    changeHTML = `<span class="price-change ${cls}">${sign}${Math.abs(chg).toLocaleString()}${pct}</span>`;
   }
 
   const tags = [];
-  if (c.rooms)         tags.push(formatRooms(c.rooms));
-  if (c.city)          tags.push(c.city);
-  if (c.neighborhood)  tags.push(c.neighborhood);
-  if (c.floor != null) tags.push(c.floor === 0 ? 'קרקע' : `קומה ${c.floor}`);
-  if (c.size_sqm)      tags.push(`${c.size_sqm} מ"ר`);
-  if (c.property_type) tags.push(c.property_type);
+  if (roomsNum)          tags.push(formatRooms(roomsNum));
+  if (cityStr)           tags.push(cityStr);
+  if (neighStr)          tags.push(neighStr);
+  if (floorNum != null)  tags.push(floorNum === 0 ? 'קרקע' : `קומה ${floorNum}`);
+  if (sqmNum)            tags.push(`${sqmNum} מ"ר`);
+  if (propType)          tags.push(propType);
 
-  const pricePerSqm = (c.price && c.size_sqm && c.size_sqm > 0) ? Math.round(c.price / c.size_sqm) : null;
+  const pricePerSqm = (priceNum && sqmNum && sqmNum > 0) ? Math.round(priceNum / sqmNum) : null;
 
   let brokerTag = '';
-  if (c.broker === true)  brokerTag = '<span class="tag broker">תיווך</span>';
-  if (c.broker === false) brokerTag = '<span class="tag direct">ישיר</span>';
+  if (c.broker === true  || c.broker === 1) brokerTag = '<span class="tag broker">תיווך</span>';
+  if (c.broker === false || c.broker === 0) brokerTag = '<span class="tag direct">ישיר</span>';
 
   let txTag = '';
-  if (c.for_rent === true)  txTag = '<span class="tag rent">השכרה</span>';
-  if (c.for_rent === false) txTag = '<span class="tag sale">מכירה</span>';
+  if (c.for_rent === true  || c.for_rent === 1) txTag = '<span class="tag rent">השכרה</span>';
+  if (c.for_rent === false || c.for_rent === 0) txTag = '<span class="tag sale">מכירה</span>';
 
-  const sqmTag = pricePerSqm ? `<span class="tag sqm">${fmtPrice(pricePerSqm)} ₪/מ"ר</span>` : '';
-  const brokerSuspectTag = c.is_broker_suspect ? '<span class="tag broker-suspect">⚠ חשד תיווך</span>' : '';
-  const entryDateTag = c.entry_date ? `<span class="tag entry-date">📅 ${esc(c.entry_date)}</span>` : '';
+  const sqmTag          = pricePerSqm ? `<span class="tag sqm">${fmtPrice(pricePerSqm)} ₪/מ"ר</span>` : '';
+  const brokerSuspectTag= c.is_broker_suspect ? '<span class="tag broker-suspect">⚠ חשד תיווך</span>' : '';
+  const entryDateTag    = entryDate ? `<span class="tag entry-date">📅 ${esc(entryDate)}</span>` : '';
   const tagsHTML = tags.map(t => `<span class="tag">${esc(t)}</span>`).join('') +
     brokerTag + txTag + '<span class="tag src-fb">FB</span>' + sqmTag + brokerSuspectTag + entryDateTag;
 
-  const scoreReasonHTML = c.score_reason
-    ? `<div class="score-reason">💬 ${esc(c.score_reason)}</div>` : '';
+  const scoreReasonHTML = scoreRaw ? `<div class="score-reason">💬 ${esc(scoreRaw)}</div>` : '';
 
-  const photoHTML = c.photo_url
-    ? `<div class="card-photo"><img src="${esc(c.photo_url)}" alt="" loading="lazy" onerror="this.parentElement.style.display='none'"></div>` : '';
+  const photoHTML = photoUrl
+    ? `<div class="card-photo"><img src="${esc(photoUrl)}" alt="" loading="lazy" onerror="this.parentElement.style.display='none'"></div>` : '';
 
   return `
-  <div class="card" id="card-${esc(c.listing_id)}" onclick="toggleCard('${esc(c.listing_id)}',this)">
+  <div class="card" id="card-${esc(id)}" onclick="toggleCard('${esc(id)}',this)">
     ${photoHTML}
     <div class="card-top">
       <span class="score-badge ${scoreCls}" title="ציון AI: ${score}">${score}</span>
-      <span class="card-title">${newBadge}${esc(c.title || '–')}</span>
-      <button class="heart-btn" onclick="toggleFavorite('${esc(c.listing_id)}',event)">${ heartIcon}</button>
+      <span class="card-title">${newBadge}${esc(title)}</span>
+      <button class="heart-btn" onclick="toggleFavorite('${esc(id)}',event)">${heartIcon}</button>
       <span class="card-price">${priceStr} ${changeHTML}</span>
     </div>
     <div class="card-tags">${tagsHTML}</div>
     ${priceAnalysis(c)}
-    <div class="card-detail" id="detail-${esc(c.listing_id)}">
+    <div class="card-detail" id="detail-${esc(id)}">
       ${scoreReasonHTML}
       <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:8px;font-size:0.82rem;color:var(--text-muted)">
-        ${c.price    ? `<span>💰 <b style="color:var(--accent2)">${fmtPrice(c.price)} ₪</b></span>` : ''}
-        ${c.city     ? `<span>📍 <b>${esc(c.city)}${c.neighborhood ? ' — '+esc(c.neighborhood) : ''}</b></span>` : ''}
-        ${c.rooms    ? `<span>🛏 <b>${formatRooms(c.rooms)}</b></span>` : ''}
-        ${c.floor != null ? `<span>🏢 <b>${c.floor === 0 ? 'קרקע' : 'קומה '+c.floor}${c.total_floors ? '/'+c.total_floors : ''}</b></span>` : ''}
-        ${c.size_sqm ? `<span>📐 <b>${c.size_sqm} מ"ר</b></span>` : ''}
-        ${c.entry_date ? `<span>📅 כניסה: <b style="color:var(--yellow)">${esc(c.entry_date)}</b></span>` : ''}
+        ${priceNum  ? `<span>💰 <b style="color:var(--accent2)">${fmtPrice(priceNum)} ₪</b></span>` : ''}
+        ${cityStr   ? `<span>📍 <b>${esc(cityStr)}${neighStr ? ' — '+esc(neighStr) : ''}</b></span>` : ''}
+        ${roomsNum  ? `<span>🛏 <b>${formatRooms(roomsNum)}</b></span>` : ''}
+        ${floorNum != null ? `<span>🏢 <b>${floorNum === 0 ? 'קרקע' : 'קומה '+floorNum}${totalFlrs ? '/'+totalFlrs : ''}</b></span>` : ''}
+        ${sqmNum    ? `<span>📐 <b>${sqmNum} מ"ר</b></span>` : ''}
+        ${entryDate ? `<span>📅 כניסה: <b style="color:var(--yellow)">${esc(entryDate)}</b></span>` : ''}
       </div>
-      <div>${esc(c.description || '')}</div>
-      ${c.phone ? `<a class="phone-btn" href="tel:${esc(c.phone)}" onclick="event.stopPropagation()">📞 ${esc(c.phone)}</a>` : ''}
-      <a class="card-link" href="${esc(c.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="display:block;margin-top:8px">פתח במרקטפלייס ↗</a>
+      <div>${esc(descRaw)}</div>
+      ${phone ? `<a class="phone-btn" href="tel:${esc(phone)}" onclick="event.stopPropagation()">📞 ${esc(phone)}</a>` : ''}
+      <a class="card-link" href="${esc(url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="display:block;margin-top:8px">פתח במרקטפלייס ↗</a>
       <div class="history-title">היסטוריית מחירים</div>
       <div id="hist-${esc(c.listing_id)}">טוען...</div>
     </div>
@@ -1111,8 +1189,24 @@ function formatRooms(r) {
 function esc(s) {
   return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
+function skeletonCard() {
+  return `<div class="skeleton-card">
+    <div class="skel-row">
+      <div class="skel" style="width:28px;height:28px;border-radius:50%;flex-shrink:0"></div>
+      <div class="skel" style="height:15px;flex:1;border-radius:4px"></div>
+      <div class="skel" style="width:90px;height:15px;border-radius:4px"></div>
+    </div>
+    <div class="skel-tags">
+      <div class="skel" style="width:55px;height:22px;border-radius:10px"></div>
+      <div class="skel" style="width:75px;height:22px;border-radius:10px"></div>
+      <div class="skel" style="width:40px;height:22px;border-radius:10px"></div>
+    </div>
+  </div>`;
+}
+
 function showLoading() {
-  document.getElementById('results').innerHTML = '<div class="no-results"><span class="spinner"></span> טוען...</div>';
+  document.getElementById('results').innerHTML =
+    Array(8).fill(null).map(skeletonCard).join('');
 }
 function showError(msg) {
   document.getElementById('results').innerHTML = `<div class="no-results" style="color:var(--red)">${esc(msg)}</div>`;
