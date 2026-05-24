@@ -233,7 +233,8 @@ def get_apartments(
         conditions.append("first_seen >= datetime('now', ?)")
         params.append(f"-{hours_fresh} hours")
 
-    conditions.append("(price_text IS NULL OR price_text = '' OR (price_text NOT LIKE '%$%' AND price_text NOT LIKE '%USD%'))")
+    # Only exclude listings where price is clearly USD-only (no ₪ sign at all)
+    conditions.append("(price_text IS NULL OR price_text = '' OR price_text LIKE '%₪%' OR price_text LIKE '%ש\"ח%' OR (price_text NOT LIKE '%$%' AND price_text NOT LIKE '%USD%'))")
     where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
     sql = f"""
         SELECT * FROM apartments
