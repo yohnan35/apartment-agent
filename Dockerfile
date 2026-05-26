@@ -18,6 +18,7 @@ RUN playwright install chromium --with-deps
 COPY . .
 
 ENV DATA_DIR=/data
+ENV PYTHONPATH=/app
 RUN mkdir -p /data
 
 EXPOSE 8000
