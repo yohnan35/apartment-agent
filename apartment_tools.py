@@ -8,28 +8,40 @@ import apartments_db as db
 import extractor
 import scraper
 import scoring
+import utils
 import yad2_scraper
 
+_log = utils.get_logger(__name__)
 
-def scrape_apartments(query: str = "דירה", max_results: int = 40) -> dict[str, Any]:
-    """Scrape Facebook Marketplace, extract fields, store in DB."""
+
+def scrape_apartments(query: str = "דירות למכירה", max_results: int = 40) -> dict[str, Any]:
+    """Scrape Facebook Marketplace for FOR-SALE listings, extract fields, store in DB."""
+    # Hard-lock: always append "למכירה" if not already present so the search targets sales.
+    if "למכירה" not in query:
+        query = query.strip() + " למכירה"
+
     listings = asyncio.run(scraper.scrape(query=query, max_results=max_results))
     if not listings:
         return {"scraped": 0, "stored": 0, "message": "לא נמצאו תוצאות"}
 
-    # העבר hint לextractor: אם ה-query כולל "למכירה" → for_rent=false
-    is_sale = "למכירה" in query
+    # Always set for_rent=False — scraper is sale-only
     for l in listings:
-        l["_query_hint_for_rent"] = False if is_sale else None
+        l["_query_hint_for_rent"] = False
 
     extracted_list = extractor.bulk_extract(listings)
+
+    # Hard-lock: force for_rent=False on every extracted item regardless of AI output.
+    # Belt-and-suspenders — the extractor already applies the hint, but this catches
+    # any edge case where the hint was not propagated (fallback path, empty dict, etc.)
+    for ext in extracted_list:
+        ext["for_rent"] = False
 
     # Score all listings in one API call
     try:
         score_list = scoring.bulk_score(listings, extracted_list)
     except Exception as exc:
-        print(f"[scoring error] {exc}")
-        score_list = [{"score": None, "score_reason": None, "is_broker_suspect": None}] * len(listings)
+        _log.error("FB scoring failed: %s", exc, exc_info=True)
+        score_list = [{"score": None, "score_reason": None, "is_broker_suspect": None, "tags": []}] * len(listings)
 
     # Merge scores into extracted dicts
     merged_list = []
@@ -45,7 +57,7 @@ def scrape_apartments(query: str = "דירה", max_results: int = 40) -> dict[st
             stored += 1
         except Exception as exc:
             failed += 1
-            print(f"[upsert error] listing {listing.get('listing_id')}: {exc}")
+            _log.error("upsert failed for listing %s: %s", listing.get("listing_id"), exc, exc_info=True)
 
     return {
         "scraped": len(listings),
@@ -61,17 +73,16 @@ def scrape_yad2_apartments(
     max_rooms: Optional[float] = None,
     min_price: Optional[int] = None,
     max_price: Optional[int] = None,
-    for_rent: bool = True,
     max_results: int = 40,
 ) -> dict[str, Any]:
-    """Scrape Yad2, use pre-structured data (no extractor needed), store in DB."""
+    """Scrape Yad2 FOR-SALE listings, use pre-structured data, store in DB."""
     listings = yad2_scraper.scrape_yad2(
         city=city,
         min_rooms=min_rooms,
         max_rooms=max_rooms,
         min_price=min_price,
         max_price=max_price,
-        for_rent=for_rent,
+        for_rent=False,   # hard-locked; rental path removed
         max_results=max_results,
     )
     if not listings:
@@ -84,8 +95,8 @@ def scrape_yad2_apartments(
     try:
         score_list = scoring.bulk_score(listings, extracted_list)
     except Exception as exc:
-        print(f"[yad2 scoring error] {exc}")
-        score_list = [{"score": None, "score_reason": None, "is_broker_suspect": None}] * len(listings)
+        _log.error("Yad2 scoring failed: %s", exc, exc_info=True)
+        score_list = [{"score": None, "score_reason": None, "is_broker_suspect": None, "tags": []}] * len(listings)
 
     # Merge scores into extracted dicts
     merged_list = [
@@ -101,7 +112,7 @@ def scrape_yad2_apartments(
             stored += 1
         except Exception as exc:
             failed += 1
-            print(f"[yad2 upsert error] {listing.get('listing_id')}: {exc}")
+            _log.error("Yad2 upsert failed for %s: %s", listing.get("listing_id"), exc, exc_info=True)
 
     return {
         "scraped": len(listings),
@@ -169,7 +180,7 @@ TOOLS = [
     },
     {
         "name": "filter_apartments",
-        "description": "מסנן דירות לפי פרמטרים מבסיס הנתונים המקומי",
+        "description": "מסנן דירות למכירה לפי פרמטרים מבסיס הנתונים המקומי (מכירה בלבד)",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -180,7 +191,6 @@ TOOLS = [
                 "max_price": {"type": "integer", "description": "מחיר מקסימלי ₪"},
                 "broker": {"type": "boolean", "description": "true=תיווך, false=ישיר"},
                 "floor": {"type": "integer", "description": "קומה ספציפית"},
-                "for_rent": {"type": "boolean", "description": "true=השכרה, false=מכירה"},
             },
         },
     },
@@ -207,7 +217,7 @@ TOOLS = [
     },
     {
         "name": "scrape_yad2_apartments",
-        "description": "מחפש דירות באתר יד2 ושומר בבסיס הנתונים",
+        "description": "מחפש דירות למכירה באתר יד2 ושומר בבסיס הנתונים (מכירה בלבד)",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -216,7 +226,6 @@ TOOLS = [
                 "max_rooms":  {"type": "number",  "description": "מקסימום חדרים"},
                 "min_price":  {"type": "integer", "description": "מחיר מינימלי ₪"},
                 "max_price":  {"type": "integer", "description": "מחיר מקסימלי ₪"},
-                "for_rent":   {"type": "boolean", "description": "true=השכרה, false=מכירה"},
                 "max_results":{"type": "integer", "description": "מספר מקסימלי תוצאות"},
             },
         },

@@ -1,12 +1,27 @@
 """
 SQLite storage for apartment listings and price history.
 """
+import json
 import os
 import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Generator, Optional
+
+import utils
+
+_log = utils.get_logger(__name__)
+
+# ---------------------------------------------------------------------------
+# SQLite custom function: Hebrew final-letter normalisation for city LIKE search
+# Registered on every connection so it works transparently in all queries.
+# ---------------------------------------------------------------------------
+
+def _sqlite_normalize_heb(s: Optional[str]) -> Optional[str]:
+    """Scalar SQLite function — normalize Hebrew finals for LIKE comparison."""
+    return utils.normalize_hebrew_finals(s)
+
 
 _DATA_DIR = Path(os.environ.get("DATA_DIR", "."))
 _DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -41,6 +56,7 @@ CREATE TABLE IF NOT EXISTS apartments (
     entry_date      TEXT,      -- תאריך כניסה (free text, e.g. "מיידי", "01/06/2025")
     phone           TEXT,      -- מספר טלפון של המפרסם
     photo_url       TEXT,      -- URL of first listing photo (from scraper)
+    tags            TEXT,      -- JSON array of AI smart tags, e.g. ["מתחת למחיר השוק"]
     first_seen      TEXT NOT NULL,
     last_updated    TEXT NOT NULL
 );
@@ -75,6 +91,9 @@ def _conn() -> Generator[sqlite3.Connection, None, None]:
     con = sqlite3.connect(DB_PATH)
     con.row_factory = sqlite3.Row
     con.execute("PRAGMA journal_mode=WAL")
+    # Register custom scalar function for Hebrew final-letter normalisation.
+    # deterministic=True lets SQLite cache the result and use it in indexes.
+    con.create_function("normalize_heb", 1, _sqlite_normalize_heb, deterministic=True)
     try:
         yield con
         con.commit()
@@ -96,6 +115,7 @@ def init_db() -> None:
             ("entry_date",        "TEXT"),
             ("phone",             "TEXT"),
             ("photo_url",         "TEXT"),
+            ("tags",              "TEXT"),
         ]:
             try:
                 con.execute(f"ALTER TABLE apartments ADD COLUMN {col_def[0]} {col_def[1]}")
@@ -130,14 +150,14 @@ def upsert_apartment(listing: dict, extracted: dict) -> None:
         row = {
             "listing_id": lid,
             "url": listing.get("url", ""),
-            "title": listing.get("title", ""),
+            "title": utils.normalize_text(listing.get("title")) or "",
             "price": listing.get("price"),
-            "price_text": listing.get("price_text", ""),
-            "location": listing.get("location", ""),
-            "description": listing.get("description", ""),
+            "price_text": utils.normalize_text(listing.get("price_text")) or "",
+            "location": utils.normalize_text(listing.get("location")) or "",
+            "description": utils.normalize_text(listing.get("description")) or "",
             "rooms": extracted.get("rooms"),
-            "city": extracted.get("city"),
-            "neighborhood": extracted.get("neighborhood"),
+            "city": utils.normalize_text(extracted.get("city")),
+            "neighborhood": utils.normalize_text(extracted.get("neighborhood")),
             "floor": extracted.get("floor"),
             "total_floors": extracted.get("total_floors"),
             "broker": _bool(extracted.get("broker")),
@@ -150,6 +170,7 @@ def upsert_apartment(listing: dict, extracted: dict) -> None:
             "entry_date": extracted.get("entry_date"),
             "phone": extracted.get("phone"),
             "photo_url": listing.get("photo_url"),
+            "tags": json.dumps(extracted.get("tags") or [], ensure_ascii=False),
             "last_updated": now,
         }
 
@@ -202,7 +223,10 @@ def get_apartments(
     params: list[Any] = []
 
     if city:
-        conditions.append("LOWER(city) LIKE LOWER(?)")
+        # normalize_heb() converts final letters (ךםןףץ → כמנפצ) on BOTH sides
+        # so "ירושלמ" (mistyped ם as מ) correctly matches stored "ירושלים".
+        # LOWER() makes the LIKE ASCII-case-insensitive as a bonus.
+        conditions.append("normalize_heb(LOWER(city)) LIKE normalize_heb(LOWER(?))")
         params.append(f"%{city}%")
     if min_rooms is not None:
         conditions.append("rooms >= ?")
@@ -222,13 +246,10 @@ def get_apartments(
     if floor is not None:
         conditions.append("floor = ?")
         params.append(floor)
-    if for_rent is not None:
-        if for_rent:
-            # להשכרה: רק מה שבטוח להשכרה
-            conditions.append("for_rent = 1")
-        else:
-            # למכירה: כולל "לא ידוע" (NULL) — מוציא רק מה שבטוח להשכרה
-            conditions.append("(for_rent = 0 OR for_rent IS NULL)")
+    # HARD-LOCK: system is sale-only — always exclude confirmed rental listings.
+    # Listings where for_rent is NULL are assumed to be sales (benefit of the doubt).
+    # The `for_rent` parameter is accepted for API compatibility but always ignored.
+    conditions.append("(for_rent = 0 OR for_rent IS NULL)")
     if hours_fresh is not None:
         conditions.append("first_seen >= datetime('now', ?)")
         params.append(f"-{hours_fresh} hours")
@@ -268,9 +289,16 @@ def get_apartments(
             if (curr is not None and prev is not None and prev != 0)
             else None
         )
-        for field in ("broker", "for_rent"):
+        # Normalise INTEGER-stored booleans → Python bool (or None)
+        for field in ("broker", "for_rent", "is_broker_suspect"):
             val = d.get(field)
             d[field] = None if val is None else bool(val)
+        # Parse tags JSON array — always returns a list, never raises
+        raw_tags = d.get("tags")
+        try:
+            d["tags"] = json.loads(raw_tags) if raw_tags else []
+        except (json.JSONDecodeError, ValueError):
+            d["tags"] = []
         results.append(d)
 
     return results
@@ -308,6 +336,7 @@ def get_city_stats() -> list[dict]:
                          THEN CAST(price AS REAL)/size_sqm END) AS avg_price_sqm
             FROM apartments
             WHERE city IS NOT NULL AND price IS NOT NULL
+              AND (for_rent = 0 OR for_rent IS NULL)
               AND (price_text IS NULL OR price_text = ''
                    OR (price_text NOT LIKE '%$%' AND price_text NOT LIKE '%USD%'))
             GROUP BY city
@@ -337,6 +366,7 @@ def get_price_trends() -> list[dict]:
                 COUNT(*)                      AS count
             FROM apartments
             WHERE price IS NOT NULL AND first_seen IS NOT NULL
+              AND (for_rent = 0 OR for_rent IS NULL)
             GROUP BY month
             ORDER BY month ASC
             LIMIT 24
@@ -379,6 +409,7 @@ def get_apartment_stats() -> dict:
                 MIN(price) AS min_price,
                 MAX(price) AS max_price
             FROM apartments
+            WHERE (for_rent = 0 OR for_rent IS NULL)
         """).fetchone()
     d = dict(row)
     if d.get("avg_price"):

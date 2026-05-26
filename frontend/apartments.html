@@ -391,9 +391,136 @@
     display: flex; align-items: center; gap: 8px;
   }
 
+  /* ── Filter strip ─────────────────────────────────────────── */
+  .filter-strip {
+    background: var(--bg2); border-bottom: 1px solid var(--border);
+    padding: 7px 20px; display: flex; align-items: center;
+    gap: 14px; flex-shrink: 0; flex-wrap: wrap;
+  }
+  .filter-strip.hidden { display: none !important; }
+  .filter-group { display: flex; align-items: center; gap: 5px; }
+  .filter-label { font-size: 0.73rem; color: var(--text-muted); white-space: nowrap; }
+  .f-input {
+    background: var(--bg3); border: 1px solid var(--border);
+    color: var(--text); padding: 4px 8px; border-radius: 6px;
+    font-size: 0.8rem; outline: none;
+  }
+  .f-input.city   { width: 128px; }
+  .f-input.narrow { width: 76px; }
+  .f-input:focus { border-color: var(--accent); }
+  .f-input::placeholder { color: var(--text-muted); opacity: .55; }
+  /* Hide number spinners — cleaner look in RTL */
+  .f-input[type=number]::-webkit-inner-spin-button,
+  .f-input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  .f-input[type=number] { -moz-appearance: textfield; }
+  .f-sep { color: var(--text-muted); font-size: 0.78rem; }
+  .rent-toggle {
+    display: flex; border: 1px solid var(--border); border-radius: 20px; overflow: hidden;
+  }
+  .rent-btn {
+    background: none; border: none; color: var(--text-muted);
+    padding: 4px 11px; font-size: 0.74rem; cursor: pointer;
+    transition: all .15s; white-space: nowrap;
+  }
+  .rent-btn.active { background: var(--accent); color: #fff; }
+  .rent-btn:hover:not(.active) { background: var(--bg3); color: var(--text); }
+  .filter-clear {
+    background: none; border: 1px solid transparent; color: var(--text-muted);
+    font-size: 0.72rem; cursor: pointer; padding: 3px 8px;
+    border-radius: 6px; margin-right: auto; transition: all .15s;
+  }
+  .filter-clear:hover { border-color: var(--red); color: var(--red); }
+  .btn-delete-all {
+    background: none; border: 1px solid transparent; color: var(--text-muted);
+    font-size: 0.72rem; cursor: pointer; padding: 3px 8px;
+    border-radius: 6px; transition: all .15s; white-space: nowrap;
+  }
+  .btn-delete-all:hover { border-color: var(--red); color: var(--red); background: rgba(255,80,80,.07); }
+  .btn-delete-all:disabled { opacity: .45; cursor: not-allowed; }
+  .sale-lock-badge {
+    font-size: 0.74rem; font-weight: 600; color: var(--accent2);
+    background: rgba(78,204,163,0.08); border: 1px solid var(--accent2);
+    padding: 4px 12px; border-radius: 20px; white-space: nowrap; cursor: default;
+  }
+
   ::-webkit-scrollbar { width: 5px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* ── חדש עכשיו! neon badge ─────────────────────────────── */
+  .badge-fresh-now {
+    display: inline-block;
+    background: linear-gradient(135deg, #00ff88, #00ccff);
+    color: #0a0a0a;
+    font-size: 0.65rem; font-weight: 800;
+    padding: 2px 7px; border-radius: 8px;
+    margin-right: 6px; vertical-align: middle;
+    letter-spacing: 0.3px;
+    animation: neon-pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes neon-pulse {
+    0%, 100% { box-shadow: 0 0 5px #00ff88, 0 0 10px #00ff8880; opacity: 1; }
+    50%       { box-shadow: 0 0 12px #00ff88, 0 0 22px #00ccff70; opacity: 0.85; }
+  }
+
+  /* ── AI Smart Tag styles ───────────────────────────────── */
+  .tag.ai-below-market  { border-color: var(--green);  color: var(--green);  background: rgba(78,204,163,.08); }
+  .tag.ai-tama          { border-color: #f97316;       color: #f97316;       background: rgba(249,115,22,.08); }
+  .tag.ai-invest        { border-color: var(--yellow); color: var(--yellow); background: rgba(255,209,102,.08); }
+  .tag.ai-renovated     { border-color: var(--accent); color: var(--accent); background: rgba(108,99,255,.08); }
+  .tag.ai-needs-work    { border-color: var(--red);    color: var(--red);    background: rgba(255,107,107,.08); }
+  .tag.ai-generic       { border-color: #a78bfa;       color: #a78bfa;       background: rgba(167,139,250,.08); }
+
+  /* ── Semantic search bar ───────────────────────────────── */
+  .semantic-bar {
+    background: var(--bg2); border-bottom: 1px solid var(--border);
+    padding: 7px 20px; display: flex; align-items: center;
+    gap: 10px; flex-shrink: 0; flex-wrap: wrap;
+  }
+  .semantic-bar.hidden { display: none !important; }
+  .semantic-input {
+    flex: 1; min-width: 160px; max-width: 440px;
+    background: var(--bg3); border: 1px solid var(--border);
+    color: var(--text); padding: 5px 14px; border-radius: 20px;
+    font-size: 0.84rem; outline: none; font-family: inherit;
+  }
+  .semantic-input:focus { border-color: var(--accent2); }
+  .semantic-input::placeholder { color: var(--text-muted); opacity: .6; }
+  .semantic-btn {
+    background: var(--accent2); color: var(--bg);
+    border: none; padding: 5px 16px; border-radius: 20px;
+    font-size: 0.8rem; font-weight: 700; cursor: pointer; white-space: nowrap;
+    flex-shrink: 0; transition: opacity .2s;
+  }
+  .semantic-btn:hover { opacity: .85; }
+  .semantic-btn:disabled { opacity: .5; cursor: default; }
+  .semantic-interp {
+    font-size: 0.73rem; color: var(--accent2); opacity: .85;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 280px;
+  }
+
+  /* ── AI Tag cloud (clickable filters) ─────────────────── */
+  .tag-cloud {
+    background: var(--bg2); border-bottom: 1px dashed var(--border);
+    padding: 6px 20px; display: flex; align-items: center;
+    gap: 7px; flex-shrink: 0; flex-wrap: wrap; min-height: 40px;
+  }
+  .tag-cloud.hidden { display: none !important; }
+  .tag-cloud-label { font-size: 0.71rem; color: var(--text-muted); white-space: nowrap; flex-shrink: 0; }
+  .ai-filter-btn {
+    font-size: 0.72rem; padding: 3px 10px; border-radius: 12px;
+    border: 1px solid var(--border); background: var(--bg3);
+    color: var(--text-muted); cursor: pointer; white-space: nowrap;
+    transition: all .15s;
+  }
+  .ai-filter-btn:hover { border-color: #a78bfa; color: #a78bfa; }
+  .ai-filter-btn.active { background: rgba(167,139,250,.15); border-color: #a78bfa; color: #a78bfa; font-weight: 600; }
+  .ai-filter-clear {
+    font-size: 0.7rem; padding: 2px 8px; border-radius: 10px;
+    border: 1px solid transparent; background: none;
+    color: var(--red); cursor: pointer; transition: all .15s;
+  }
+  .ai-filter-clear:hover { border-color: var(--red); }
 </style>
 </head>
 <body>
@@ -449,6 +576,7 @@
       <option value="price_desc">מחיר יורד</option>
       <option value="rooms">חדרים</option>
       <option value="score">ציון AI</option>
+      <option value="change">שינוי מחיר</option>
     </select>
     <button class="btn-icon" onclick="exportCSV()" title="ייצוא Excel">📤</button>
     <button class="btn-icon danger" onclick="doClear()" title="מחק הכל">🗑</button>
@@ -459,6 +587,50 @@
     </button>
   </div>
 </header>
+
+<!-- ── Semantic search bar ─────────────────────────────── -->
+<div class="semantic-bar" id="semantic-bar">
+  <input class="semantic-input" id="semantic-input" type="text"
+    placeholder="🔍 חיפוש חכם AI — למשל: דירה למשפחה, זולה יחסית, זקוקה לשיפוץ..."
+    autocomplete="off" dir="rtl"
+    onkeydown="if(event.key==='Enter')doSemanticSearch()">
+  <button class="semantic-btn" id="semantic-btn" onclick="doSemanticSearch()">🔍 חפש חכם</button>
+  <span class="semantic-interp" id="semantic-interp"></span>
+</div>
+
+<!-- ── AI Tag cloud ─────────────────────────────────────── -->
+<div class="tag-cloud hidden" id="tag-cloud"></div>
+
+<!-- ── Filter strip ─────────────────────────────────────── -->
+<div class="filter-strip" id="filter-strip">
+  <div class="filter-group">
+    <span class="filter-label">🏙 עיר</span>
+    <input class="f-input city" id="f-city" type="text"
+      placeholder="חיפוש עיר..." autocomplete="off" dir="rtl"
+      oninput="debouncedFilter()">
+  </div>
+  <div class="filter-group">
+    <span class="filter-label">₪ מחיר</span>
+    <input class="f-input narrow" id="f-min-price" type="number"
+      placeholder="מינ׳" min="0" step="10000" onchange="doFilter()">
+    <span class="f-sep">–</span>
+    <input class="f-input narrow" id="f-max-price" type="number"
+      placeholder="מקס׳" min="0" step="10000" onchange="doFilter()">
+  </div>
+  <div class="filter-group">
+    <span class="filter-label">🛏 חדרים</span>
+    <input class="f-input narrow" id="f-min-rooms" type="number"
+      placeholder="מינ׳" min="0.5" max="20" step="0.5" onchange="doFilter()">
+    <span class="f-sep">–</span>
+    <input class="f-input narrow" id="f-max-rooms" type="number"
+      placeholder="מקס׳" min="0.5" max="20" step="0.5" onchange="doFilter()">
+  </div>
+  <div class="filter-group">
+    <span class="sale-lock-badge" title="המערכת מוגבלת לדירות למכירה בלבד">🏠 מכירה בלבד</span>
+  </div>
+  <button class="filter-clear" onclick="clearFilters()" title="נקה כל הסינונים">✕ נקה</button>
+  <button class="btn-delete-all" id="btn-delete-all" onclick="deleteAllApartments()" title="מחק את כל הדירות ממאגר הנתונים">🗑 מחק הכל</button>
+</div>
 
 <!-- ── Main ────────────────────────────────────────────── -->
 <div class="main">
@@ -523,19 +695,43 @@ let activeTab = 'all';
 let chatHistory = [];
 let openCardId = null;
 let historyCache = {};
+const HISTORY_CACHE_MAX = 200;   // cap to prevent unbounded memory growth
 let autoRefreshTimer = null;
+const filterRent = false;        // HARD-LOCK: sale-only — never changes
+let _filterDebounceTimer = null;
 let autoRefreshCountdown = 0;
 const AUTO_REFRESH_SECONDS = 300;
 let favorites = new Set(JSON.parse(localStorage.getItem('apt_favorites') || '[]'));
 let cityAverages = {};
 let chartInstances = {};
+let activeTagFilter = null;      // currently active AI smart-tag filter (string or null)
 
 // ── Init ─────────────────────────────────────────────────
-window.onload = () => {
+window.onload = async () => {
   checkFbStatus();
+
+  // ── API connectivity check — fail fast with a clear message ──────────────
+  // Must succeed before we attempt to load any data.
+  try {
+    const controller = typeof AbortSignal !== 'undefined' && AbortSignal.timeout
+      ? { signal: AbortSignal.timeout(7000) }
+      : {};
+    const ping = await fetch(API + '/health', controller);
+    if (!ping.ok) throw new Error(`השרת החזיר קוד ${ping.status}`);
+  } catch(e) {
+    showError(
+      `⚠️ לא ניתן להגיע לשרת.<br>` +
+      `<small style="opacity:.7">${esc(String(e.message || e))}</small><br><br>` +
+      `<small>בדוק שה-Railway deploy הצליח ורענן את הדף.</small>`
+    );
+    console.error('[init] health check failed:', e);
+    return;   // abort — don't attempt data load
+  }
+
   loadStats();
   loadAll();
-  // Auto-open chat on first visit
+
+  // Auto-open chat on first visit (after data loads)
   if (!localStorage.getItem('chat_opened')) {
     setTimeout(() => {
       document.getElementById('chat-pane').classList.add('open');
@@ -623,6 +819,11 @@ function setTab(tab, el) {
   document.getElementById('results').style.display = (isMarket || isMap) ? 'none' : '';
   document.getElementById('market-panel').classList.toggle('visible', isMarket);
   document.getElementById('map-panel').classList.toggle('visible', isMap);
+  // Filter strip, semantic bar and tag cloud not relevant for map/market views
+  document.getElementById('filter-strip').classList.toggle('hidden', isMarket || isMap);
+  document.getElementById('semantic-bar').classList.toggle('hidden', isMarket || isMap);
+  const _tagCloud = document.getElementById('tag-cloud');
+  if (_tagCloud) _tagCloud.classList.toggle('hidden', isMarket || isMap);
   if (tab === 'fresh') startAutoRefresh();
   else stopAutoRefresh();
   if (isMarket) loadMarketCharts();
@@ -725,41 +926,314 @@ function updateCountdown() {
     `מתרענן בעוד ${m}:${String(s).padStart(2,'0')}`;
 }
 
-// ── Filter (load all) ─────────────────────────────────────
+// ── Hebrew filter helpers ─────────────────────────────────
+
+/**
+ * Replace Hebrew word-final letter forms (ךםןףץ) with their regular counterparts
+ * (כמנפצ) so city searches are insensitive to final-letter form.
+ * Mirrors utils.normalize_hebrew_finals() in Python.
+ */
+function normalizeHebrewFinals(s) {
+  return String(s ?? '')
+    .replace(/ך/g, 'כ')  // ך → כ
+    .replace(/ם/g, 'מ')  // ם → מ
+    .replace(/ן/g, 'נ')  // ן → נ
+    .replace(/ף/g, 'פ')  // ף → פ
+    .replace(/ץ/g, 'צ'); // ץ → צ
+}
+
+/** Debounce city input so we don't fire on every keystroke. */
+function debouncedFilter() {
+  clearTimeout(_filterDebounceTimer);
+  _filterDebounceTimer = setTimeout(doFilter, 350);
+}
+
+/** Reset all filter inputs to their blank state and reload. */
+function clearFilters() {
+  document.getElementById('f-city').value       = '';
+  document.getElementById('f-min-price').value  = '';
+  document.getElementById('f-max-price').value  = '';
+  document.getElementById('f-min-rooms').value  = '';
+  document.getElementById('f-max-rooms').value  = '';
+  const semInput = document.getElementById('semantic-input');
+  if (semInput) semInput.value = '';
+  const semInterp = document.getElementById('semantic-interp');
+  if (semInterp) semInterp.textContent = '';
+  activeTagFilter = null;
+  // filterRent is a const (false) — no reset needed
+  renderTagCloud();
+  doFilter();
+}
+
+/** Delete ALL apartments from the DB after explicit user confirmation. */
+async function deleteAllApartments() {
+  if (!confirm('⚠️ האם למחוק את כל הדירות ממאגר הנתונים?\n\nפעולה זו בלתי הפיכה.')) return;
+  const btn = document.getElementById('btn-delete-all');
+  btn.disabled = true;
+  btn.textContent = '⏳ מוחק...';
+  try {
+    const res = await fetch(API + '/apartments', { method: 'DELETE' });
+    if (!res.ok) throw new Error(`שגיאת שרת ${res.status}`);
+    const data = await res.json();
+    const deleted = data.deleted ?? 0;
+    // Clear in-memory state
+    allCards = [];
+    activeTagFilter = null;
+    historyCache = {};
+    renderTagCloud();
+    loadStats();
+    const panel = document.getElementById('results');
+    panel.innerHTML = `<div class="no-results">🗑 ${deleted} דירות נמחקו<div class="hint">הפעל סריקה חדשה מהצ׳אט כדי לטעון דירות</div></div>`;
+  } catch(e) {
+    alert('שגיאה במחיקה: ' + String(e.message));
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🗑 מחק הכל';
+  }
+}
+
+// ── Freshness helpers ─────────────────────────────────────
+
+/**
+ * Returns number of minutes since the given timestamp.
+ * Returns Infinity on missing / invalid input so callers can do simple comparisons.
+ */
+function minutesSince(ts) {
+  if (!ts) return Infinity;
+  let s = String(ts).trim().replace(' ', 'T');
+  // Append 'Z' only when no timezone designator is already present
+  if (!/[Zz]$/.test(s) && !/[+-]\d{2}:\d{2}$/.test(s)) s += 'Z';
+  const t = new Date(s);
+  return isNaN(t.getTime()) ? Infinity : (Date.now() - t.getTime()) / 60000;
+}
+
+/**
+ * True if the listing was first seen within the last 2 hours — triggers ⚡ badge.
+ */
+function isFreshNow(ts) { return minutesSince(ts) < 120; }
+
+// ── AI Smart Tag cloud ────────────────────────────────────
+
+const _AI_TAG_STYLES = {
+  'מתחת למחיר השוק':             { cls: 'ai-below-market', icon: '💰' },
+  'פוטנציאל לתמ"א/פינוי בינוי':  { cls: 'ai-tama',         icon: '🏗' },
+  'נכס להשקעה':                  { cls: 'ai-invest',        icon: '📈' },
+  'משופצת מהיסוד':               { cls: 'ai-renovated',     icon: '✨' },
+  'זקוקה לשיפוץ':                { cls: 'ai-needs-work',    icon: '🔨' },
+};
+
+/** Rebuild the clickable AI-tag filter cloud from the current allCards data. */
+function renderTagCloud() {
+  const cloud = document.getElementById('tag-cloud');
+  if (!cloud) return;
+
+  // Count how many listings carry each tag
+  const tagCounts = {};
+  for (const c of allCards) {
+    const tags = Array.isArray(c.tags) ? c.tags : [];
+    for (const t of tags) {
+      tagCounts[t] = (tagCounts[t] || 0) + 1;
+    }
+  }
+
+  const entries = Object.entries(tagCounts).sort((a, b) => b[1] - a[1]);
+  if (!entries.length) {
+    cloud.classList.add('hidden');
+    return;
+  }
+
+  cloud.classList.remove('hidden');
+  const btns = entries.map(([tag, count]) => {
+    const isActive = activeTagFilter === tag;
+    const style = _AI_TAG_STYLES[tag] || { icon: '✦', cls: 'ai-generic' };
+    return `<button class="ai-filter-btn${isActive ? ' active' : ''}"
+      onclick="setTagFilter('${esc(tag)}')"
+      title="${esc(tag)} — ${count} דירות">
+      ${style.icon} ${esc(tag)}
+      <span style="opacity:.55;font-size:.67rem">(${count})</span>
+    </button>`;
+  }).join('');
+
+  const clearBtn = activeTagFilter
+    ? `<button class="ai-filter-clear" onclick="setTagFilter(null)" title="בטל סינון">✕ בטל</button>`
+    : '';
+
+  cloud.innerHTML = `<span class="tag-cloud-label">🏷 תגיות AI:</span>${btns}${clearBtn}`;
+}
+
+/** Toggle the active AI tag filter; pass null to clear. */
+function setTagFilter(tag) {
+  activeTagFilter = (activeTagFilter === tag) ? null : tag;
+  renderTagCloud();
+  renderCards();
+}
+
+// ── AI Semantic Search ────────────────────────────────────
+
+async function doSemanticSearch() {
+  const input  = document.getElementById('semantic-input');
+  const btn    = document.getElementById('semantic-btn');
+  const interp = document.getElementById('semantic-interp');
+  const query  = (input?.value ?? '').trim();
+  if (!query) { input?.focus(); return; }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ מנתח...';
+  if (interp) interp.textContent = '';
+
+  try {
+    const r = await fetch(API + '/search/semantic', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json; charset=utf-8' },
+      body: JSON.stringify({ query }),
+    });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      throw new Error(err.detail || `HTTP ${r.status}`);
+    }
+    const data = await r.json();
+
+    // Populate filter inputs with AI-parsed params (only when non-null)
+    if (data.city)      document.getElementById('f-city').value      = data.city;
+    if (data.min_price != null) document.getElementById('f-min-price').value = data.min_price;
+    if (data.max_price != null) document.getElementById('f-max-price').value = data.max_price;
+    if (data.min_rooms != null) document.getElementById('f-min-rooms').value = data.min_rooms;
+    if (data.max_rooms != null) document.getElementById('f-max-rooms').value = data.max_rooms;
+
+    // Apply AI tag filter if returned
+    if (data.tag_filter) activeTagFilter = data.tag_filter;
+
+    if (interp && data.interpretation) {
+      interp.textContent = '💡 ' + data.interpretation;
+    }
+
+    await doFilter();
+  } catch(e) {
+    console.error('[doSemanticSearch]', e);
+    if (interp) interp.textContent = '⚠ ' + e.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🔍 חפש חכם';
+  }
+}
+
+// ── Filter / load ─────────────────────────────────────────
 async function doFilter() {
   const params = new URLSearchParams();
+
+  // Fresh tab — only listings from the last hour
   if (activeTab === 'fresh') params.set('hours_fresh', '1');
+
+  // ── City: Hebrew final-letter normalised before sending to backend ────────
+  // Backend also normalises both sides, so "ירושלמ" matches stored "ירושלים".
+  const cityRaw = (document.getElementById('f-city')?.value ?? '').trim();
+  if (cityRaw) params.set('city', normalizeHebrewFinals(cityRaw));
+
+  // ── Price range — NIS (₪) only; no USD conversion or logic ───────────────
+  const minPrice = parseInt(document.getElementById('f-min-price')?.value ?? '', 10);
+  const maxPrice = parseInt(document.getElementById('f-max-price')?.value ?? '', 10);
+  if (!isNaN(minPrice) && minPrice > 0) params.set('min_price', minPrice);
+  if (!isNaN(maxPrice) && maxPrice > 0) params.set('max_price', maxPrice);
+
+  // ── Rooms — parseFloat so "3" also matches 3.5-room apartments ───────────
+  // min_rooms=3 → backend uses rooms >= 3.0, which includes 3.5 ✓
+  const minRooms = parseFloat(document.getElementById('f-min-rooms')?.value ?? '');
+  const maxRooms = parseFloat(document.getElementById('f-max-rooms')?.value ?? '');
+  if (!isNaN(minRooms) && minRooms > 0) params.set('min_rooms', minRooms);
+  if (!isNaN(maxRooms) && maxRooms > 0) params.set('max_rooms', maxRooms);
+
+  // ── Transaction type: hard-locked to sale-only ───────────────────────────
+  params.set('for_rent', 'false');   // always; accepted by API but DB ignores it anyway
 
   showLoading();
   try {
     const r = await fetch(API + '/apartments?' + params.toString(), {
-      headers: { 'Accept': 'application/json; charset=utf-8' }
+      headers: { 'Accept': 'application/json; charset=utf-8' },
     });
     if (!r.ok) throw new Error(`HTTP ${r.status}: ${r.statusText}`);
 
-    const raw = await r.text();                     // read as text first
+    const raw = await r.text();
+
+    // ── Parse response — handle both raw array and wrapped object ────────────
+    // Backend always returns a raw array; wrapped-object support is a safeguard
+    // in case the schema changes (e.g. {data:[...]} or {apartments:[...]}).
     let data;
     try {
-      data = JSON.parse(raw);                        // explicit UTF-8 parse
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        data = parsed;
+      } else if (parsed && Array.isArray(parsed.data)) {
+        data = parsed.data;
+        console.warn('[doFilter] backend returned wrapped {data:[...]} — using .data');
+      } else if (parsed && Array.isArray(parsed.apartments)) {
+        data = parsed.apartments;
+        console.warn('[doFilter] backend returned wrapped {apartments:[...]} — using .apartments');
+      } else {
+        console.error('[doFilter] unexpected response shape:', typeof parsed, String(raw).slice(0, 200));
+        throw new Error('תגובת שרת לא תקינה — צפוי מערך JSON');
+      }
     } catch(parseErr) {
-      console.error('[doFilter] JSON parse error:', parseErr, raw.slice(0, 200));
+      console.error('[doFilter] JSON parse error:', parseErr, String(raw).slice(0, 200));
       throw new Error('שגיאת פענוח JSON מהשרת');
     }
 
-    if (!Array.isArray(data)) {
-      console.error('[doFilter] expected array, got:', typeof data, data);
-      throw new Error('תגובת שרת לא תקינה (לא מערך)');
+    // ── Deduplicate by listing_id ─────────────────────────────────────────────
+    const _seenIds = new Set();
+    allCards = data.filter(c => {
+      if (!c || typeof c !== 'object') return false;   // drop non-objects silently
+      const lid = c.listing_id;
+      if (!lid) return true;                           // malformed — keep for error boundary
+      if (_seenIds.has(lid)) {
+        console.warn('[doFilter] duplicate listing_id stripped:', lid);
+        return false;
+      }
+      _seenIds.add(lid);
+      return true;
+    });
+
+    console.log(
+      `[doFilter] received ${data.length} rows → ${allCards.length} unique | ` +
+      `sample: title="${allCards[0]?.title}" price=${allCards[0]?.price} city="${allCards[0]?.city}"`
+    );
+
+    // ── Data-quality check: detect a blocked/failed scrape ───────────────────
+    // If the DB has items but every single one has no price, no city and no rooms
+    // the scraper was likely blocked by Facebook and stored empty shells.
+    if (allCards.length > 0) {
+      const populated = allCards.filter(c =>
+        c.price || c.city || c.rooms ||
+        (c.title && c.title.trim() && c.title !== 'מודעה ללא כותרת')
+      );
+      const emptyRatio = (allCards.length - populated.length) / allCards.length;
+
+      if (populated.length === 0) {
+        // All shells — show actionable error instead of rendering blank cards
+        showError(
+          `🚫 יש ${allCards.length} מודעות בבסיס הנתונים אך כולן ריקות.<br>` +
+          `<small>ייתכן שפייסבוק חסם את הגישה בזמן הסריקה.</small><br><br>` +
+          `<small>נסה ללחוץ <b>"⬇ סרוק מרקטפלייס"</b> מחדש לאחר כמה דקות,<br>` +
+          `או בדוק שה-Cookies של פייסבוק עדיין תקפים.</small>`
+        );
+        console.warn('[doFilter] data-quality: all cards empty — probable scraper block');
+        loadStats();
+        return;
+      }
+      if (emptyRatio > 0.7) {
+        console.warn(
+          `[doFilter] data-quality warning: ${Math.round(emptyRatio*100)}% of cards have no content ` +
+          `(${allCards.length - populated.length}/${allCards.length})`
+        );
+      }
     }
 
-    allCards = data;
-    console.log(`[doFilter] received ${allCards.length} apartments`, allCards[0] || 'empty');
     cityAverages = computeCityAverages(allCards);
+    renderTagCloud();
     renderCards();
     loadStats();
     if (activeTab === 'map' && map) updateMapPins(allCards);
   } catch(e) {
     console.error('[doFilter] error:', e);
-    showError('שגיאה בטעינת נתונים: ' + e.message);
+    showError(`⚠️ שגיאה בטעינת נתונים: <b>${esc(String(e.message || e))}</b>`);
   }
 }
 
@@ -772,7 +1246,7 @@ async function doScrape() {
     const r = await fetch(API + '/apartments/scrape', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({query: 'דירות למכירה', max_results: 40})
+      body: JSON.stringify({query: 'דירות למכירה', max_results: 40})  // sale-only
     });
     const data = await r.json();
     if (!r.ok) throw new Error(data.detail || data.message || JSON.stringify(data));
@@ -820,6 +1294,8 @@ function renderCards() {
 
   if (activeTab === 'changed') cards = cards.filter(c => c.price_change !== null && c.price_change !== 0);
   if (activeTab === 'favorites') cards = cards.filter(c => favorites.has(c.listing_id));
+  // AI Smart Tag filter — applied on top of any tab filter
+  if (activeTagFilter) cards = cards.filter(c => Array.isArray(c.tags) && c.tags.includes(activeTagFilter));
 
   const sort = document.getElementById('sort-by').value;
   cards.sort((a, b) => {
@@ -832,12 +1308,29 @@ function renderCards() {
   });
 
   if (!cards.length) {
-    const msgs = {
-      fresh:     '🕐 אין דירות חדשות מהשעה האחרונה',
-      favorites: '❤️ עדיין אין מועדפים',
-      changed:   '💰 אין שינויי מחיר',
-    };
-    panel.innerHTML = `<div class="no-results">${msgs[activeTab] || '💬 לחץ על הצ\'אט ובקש ממני לחפש דירות'}<div class="hint">לחץ "⬇ סרוק מרקטפלייס" כדי למשוך דירות חדשות</div></div>`;
+    // Generate context-aware no-results message
+    let noResultsMsg = '';
+    if (activeTab === 'fresh') {
+      noResultsMsg = `🕐 אין דירות חדשות מהשעה האחרונה<div class="hint">הדירות החדשות ביותר מוצגות בלשונית "הכל"</div>`;
+    } else if (activeTab === 'favorites') {
+      noResultsMsg = `❤️ עדיין אין מועדפים<div class="hint">לחץ על 🤍 בכרטיס דירה כדי להוסיף למועדפים</div>`;
+    } else if (activeTab === 'changed') {
+      noResultsMsg = `💰 אין שינויי מחיר<div class="hint">שינויי מחיר יופיעו לאחר מספר סריקות</div>`;
+    } else if (activeTagFilter) {
+      noResultsMsg = `🏷 אין דירות עם התגית "${esc(activeTagFilter)}"<div class="hint"><button class="filter-clear" onclick="setTagFilter(null)">✕ בטל סינון תגית</button></div>`;
+    } else if (allCards.length === 0) {
+      // DB is genuinely empty — prompt to scrape
+      noResultsMsg =
+        `🔍 אין דירות בבסיס הנתונים עדיין<br>` +
+        `<div class="hint">לחץ <b>"⬇ סרוק מרקטפלייס"</b> למעלה כדי להתחיל, ` +
+        `או שאל את הסוכן AI בצ\'אט למטה.</div>`;
+    } else {
+      // Cards exist but the current filter returns nothing
+      noResultsMsg =
+        `🔍 לא נמצאו דירות לפי הסינון הנוכחי<div class="hint">` +
+        `<button class="filter-clear" style="font-size:.82rem;padding:4px 12px;border:1px solid var(--accent);color:var(--accent)" onclick="clearFilters()">✕ נקה סינונים</button></div>`;
+    }
+    panel.innerHTML = `<div class="no-results">${noResultsMsg}</div>`;
     return;
   }
 
@@ -899,16 +1392,13 @@ function toggleFavorite(id, ev) {
   if (favorites.has(id)) favorites.delete(id);
   else favorites.add(id);
   localStorage.setItem('apt_favorites', JSON.stringify([...favorites]));
-  const btn = document.querySelector(`#card-${CSS.escape(id)} .heart-btn`);
+  const btn = document.querySelector(`#card-${safeId(id)} .heart-btn`);
   if (btn) btn.textContent = favorites.has(id) ? '❤️' : '🤍';
   if (activeTab === 'favorites') renderCards();
 }
 
-function isNew(firstSeen) {
-  if (!firstSeen) return false;
-  const t = new Date(firstSeen.replace(' ','T') + 'Z');
-  return (Date.now() - t.getTime()) < 60 * 60 * 1000;
-}
+/** True if the listing was first seen within the last 60 minutes (used by the 🆕 tab). */
+function isNew(firstSeen) { return minutesSince(firstSeen) < 60; }
 
 function cleanPriceText(pt) {
   if (!pt) return '–';
@@ -918,11 +1408,27 @@ function cleanPriceText(pt) {
 }
 
 function cardHTML(c) {
+  // ── Guard: completely empty card (bad scrape / FB blocked) ────────────────
+  // If the listing has no price, no city, no rooms and no real title,
+  // show a minimal "incomplete" card instead of a blank-looking full card.
+  const hasContent = c.price || c.city || c.rooms ||
+    (c.title && c.title.trim() && c.title !== 'מודעה ללא כותרת');
+  if (!hasContent) {
+    const lid = String(c.listing_id ?? '');
+    const url = String(c.url ?? '#');
+    return `
+  <div class="card-error" style="opacity:.6;font-size:.78rem">
+    ⚠ מודעה ללא תוכן (נסרקה בלי נתונים)
+    ${url !== '#' ? `— <a class="card-link" href="${esc(url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">פתח מקור ↗</a>` : ''}
+    <span style="margin-right:auto;color:var(--text-muted);font-size:.7rem">#${esc(lid)}</span>
+  </div>`;
+  }
+
   // ── Defensive field extraction ───────────────────────────
   const id        = String(c.listing_id ?? '');
-  const title     = String(c.title     ?? '').trim() || 'מודעה ללא כותרת';
+  const title     = normalizeText(c.title) || 'מודעה ללא כותרת';
   const url       = String(c.url       ?? '#');
-  const descRaw   = String(c.description ?? '');
+  const descRaw   = normalizeText(c.description);
   const cityStr   = c.city        ? String(c.city)        : '';
   const neighStr  = c.neighborhood? String(c.neighborhood): '';
   const priceNum  = (c.price != null && !isNaN(Number(c.price))) ? Number(c.price) : null;
@@ -939,7 +1445,8 @@ function cardHTML(c) {
 
   const score    = (c.score != null && !isNaN(Number(c.score))) ? Math.round(Number(c.score)) : smartScore(c);
   const scoreCls = score >= 7 ? 'score-high' : score >= 5 ? 'score-medium' : 'score-low';
-  const newBadge = isNew(c.first_seen) ? '<span class="badge-new">NEW</span>' : '';
+  // ⚡ Fresh-now badge: shows for listings posted within the last 2 hours
+  const freshBadge = isFreshNow(c.first_seen) ? '<span class="badge-fresh-now">⚡ חדש עכשיו!</span>' : '';
   const heartIcon = favorites.has(id) ? '❤️' : '🤍';
   const priceStr  = priceNum ? fmtPrice(priceNum) + ' ₪' : cleanPriceText(priceTextRaw);
 
@@ -973,26 +1480,39 @@ function cardHTML(c) {
   const sqmTag          = pricePerSqm ? `<span class="tag sqm">${fmtPrice(pricePerSqm)} ₪/מ"ר</span>` : '';
   const brokerSuspectTag= c.is_broker_suspect ? '<span class="tag broker-suspect">⚠ חשד תיווך</span>' : '';
   const entryDateTag    = entryDate ? `<span class="tag entry-date">📅 ${esc(entryDate)}</span>` : '';
+
+  // AI Smart Tags — render with dedicated styles per tag type
+  const aiTagsList = Array.isArray(c.tags) ? c.tags : [];
+  const aiTagsHTML = aiTagsList.map(t => {
+    const s = _AI_TAG_STYLES[t];
+    const cls  = s ? s.cls  : 'ai-generic';
+    const icon = s ? s.icon : '✦';
+    return `<span class="tag ${cls}">${icon} ${esc(t)}</span>`;
+  }).join('');
+
   const tagsHTML = tags.map(t => `<span class="tag">${esc(t)}</span>`).join('') +
-    brokerTag + txTag + '<span class="tag src-fb">FB</span>' + sqmTag + brokerSuspectTag + entryDateTag;
+    brokerTag + txTag + '<span class="tag src-fb">FB</span>' + sqmTag + brokerSuspectTag + entryDateTag + aiTagsHTML;
 
   const scoreReasonHTML = scoreRaw ? `<div class="score-reason">💬 ${esc(scoreRaw)}</div>` : '';
 
   const photoHTML = photoUrl
     ? `<div class="card-photo"><img src="${esc(photoUrl)}" alt="" loading="lazy" onerror="this.parentElement.style.display='none'"></div>` : '';
 
+  // safeId() is used for HTML id attributes and JS getElementById lookups —
+  // esc() is only for displayed text content (these must stay in sync).
+  const sid = safeId(id);
   return `
-  <div class="card" id="card-${esc(id)}" onclick="toggleCard('${esc(id)}',this)">
+  <div class="card" id="card-${sid}" onclick="toggleCard('${sid}',this)">
     ${photoHTML}
     <div class="card-top">
       <span class="score-badge ${scoreCls}" title="ציון AI: ${score}">${score}</span>
-      <span class="card-title">${newBadge}${esc(title)}</span>
+      <span class="card-title">${freshBadge}${esc(title)}</span>
       <button class="heart-btn" onclick="toggleFavorite('${esc(id)}',event)">${heartIcon}</button>
       <span class="card-price">${priceStr} ${changeHTML}</span>
     </div>
     <div class="card-tags">${tagsHTML}</div>
     ${priceAnalysis(c)}
-    <div class="card-detail" id="detail-${esc(id)}">
+    <div class="card-detail" id="detail-${sid}">
       ${scoreReasonHTML}
       <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:8px;font-size:0.82rem;color:var(--text-muted)">
         ${priceNum  ? `<span>💰 <b style="color:var(--accent2)">${fmtPrice(priceNum)} ₪</b></span>` : ''}
@@ -1006,25 +1526,35 @@ function cardHTML(c) {
       ${phone ? `<a class="phone-btn" href="tel:${esc(phone)}" onclick="event.stopPropagation()">📞 ${esc(phone)}</a>` : ''}
       <a class="card-link" href="${esc(url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="display:block;margin-top:8px">פתח במרקטפלייס ↗</a>
       <div class="history-title">היסטוריית מחירים</div>
-      <div id="hist-${esc(c.listing_id)}">טוען...</div>
+      <div id="hist-${sid}">טוען...</div>
     </div>
   </div>`;
 }
 
 async function toggleCard(id, el) {
-  const detail = document.getElementById('detail-' + id);
+  const detail = document.getElementById('detail-' + safeId(id));
   if (!detail) return;
   if (el.classList.contains('open')) { el.classList.remove('open'); return; }
   document.querySelectorAll('.card.open').forEach(c => c.classList.remove('open'));
   el.classList.add('open');
   if (!historyCache[id]) {
+    // Evict oldest entry when cache reaches capacity
+    const cacheKeys = Object.keys(historyCache);
+    if (cacheKeys.length >= HISTORY_CACHE_MAX) {
+      delete historyCache[cacheKeys[0]];
+    }
     try {
       const r = await fetch(API + '/apartments/history/' + encodeURIComponent(id));
-      historyCache[id] = r.ok ? await r.json() : [];
-    } catch(e) { historyCache[id] = []; }
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const payload = await r.json();
+      historyCache[id] = Array.isArray(payload) ? payload : [];
+    } catch(e) {
+      console.warn('[toggleCard] history fetch failed for', id, e);
+      historyCache[id] = [];
+    }
   }
   const hist = historyCache[id];
-  const histEl = document.getElementById('hist-' + id);
+  const histEl = document.getElementById('hist-' + safeId(id));
   if (!hist.length) { histEl.textContent = 'אין היסטוריה'; return; }
   histEl.innerHTML = `
     <table class="history-table">
@@ -1189,6 +1719,29 @@ function formatRooms(r) {
 function esc(s) {
   return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
+
+/**
+ * Safe HTML `id` attribute value: replace every non-alphanumeric/hyphen/underscore char
+ * with an underscore so the id is always valid in both HTML and getElementById().
+ * Unlike esc(), this keeps the JS lookup and the DOM attribute in sync.
+ */
+function safeId(s) {
+  return String(s ?? '').replace(/[^a-zA-Z0-9א-ת\-_]/g, '_');
+}
+
+/**
+ * Client-side Hebrew normalization — mirrors utils.normalize_text() in Python.
+ * Strips invisible Unicode bidi/zero-width characters that can break layout.
+ * Safe to call multiple times (idempotent).
+ */
+function normalizeText(s) {
+  if (s == null) return '';
+  return String(s)
+    .normalize('NFC')
+    .replace(/[​‌‍‎‏‪‫‬‭‮﻿­]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 function skeletonCard() {
   return `<div class="skeleton-card">
     <div class="skel-row">
@@ -1209,7 +1762,11 @@ function showLoading() {
     Array(8).fill(null).map(skeletonCard).join('');
 }
 function showError(msg) {
-  document.getElementById('results').innerHTML = `<div class="no-results" style="color:var(--red)">${esc(msg)}</div>`;
+  // msg may contain intentional HTML (<br>, <small>, <b> etc.).
+  // Do NOT call esc() here — callers must already escape any dynamic/user-supplied
+  // parts with esc() before passing the string in.
+  document.getElementById('results').innerHTML =
+    `<div class="no-results" style="color:var(--red)">${msg}</div>`;
 }
 </script>
 </body>

@@ -10,6 +10,16 @@ from typing import Optional
 
 from playwright.async_api import async_playwright, TimeoutError as PWTimeout
 
+import utils
+
+_log = utils.get_logger(__name__)
+
+# Rental-keyword guard — mirrors scraper.py; any matched listing is dropped.
+_RENTAL_RE = re.compile(
+    r'להשכרה|לשותפים|שותפ[הי]\b|שוכר|שכירות|שכ"ד|שכד\b|'
+    r'בחשבון חודשי|לחודש\b|ל/חודש|דמי שכירות'
+)
+
 YAD2_BASE = "https://www.yad2.co.il"
 YAD2_RENT_PATH = "/realestate/rent"
 YAD2_SALE_PATH = "/realestate/forsale"
@@ -39,10 +49,10 @@ def scrape_yad2(
     max_rooms: Optional[float] = None,
     min_price: Optional[int] = None,
     max_price: Optional[int] = None,
-    for_rent: bool = True,
+    for_rent: bool = False,   # HARD-LOCK: sale-only system; default and enforced False
     max_results: int = 40,
 ) -> list[dict]:
-    """Scrape Yad2 listings using Playwright. Returns listing dicts."""
+    """Scrape Yad2 FOR-SALE listings using Playwright. Returns listing dicts."""
     return asyncio.run(
         _scrape_yad2_async(
             city=city,
@@ -50,7 +60,7 @@ def scrape_yad2(
             max_rooms=max_rooms,
             min_price=min_price,
             max_price=max_price,
-            for_rent=for_rent,
+            for_rent=False,   # always override to sale regardless of caller
             max_results=max_results,
         )
     )
@@ -66,22 +76,23 @@ async def _scrape_yad2_async(
     max_rooms: Optional[float] = None,
     min_price: Optional[int] = None,
     max_price: Optional[int] = None,
-    for_rent: bool = True,
+    for_rent: bool = False,   # HARD-LOCK: always sale
     max_results: int = 40,
 ) -> list[dict]:
-    path = YAD2_RENT_PATH if for_rent else YAD2_SALE_PATH
+    path = YAD2_SALE_PATH   # always use sale path; YAD2_RENT_PATH is intentionally unused
 
     # Build query params
     params: list[str] = []
     if city:
         params.append(f"text={city}")
     if min_rooms is not None or max_rooms is not None:
-        lo = min_rooms or 1
-        hi = max_rooms or 10
+        # Explicit None-check — `or` treats 0 / 0.5 as falsy and would silently override them
+        lo = min_rooms if min_rooms is not None else 1
+        hi = max_rooms if max_rooms is not None else 10
         params.append(f"rooms={lo}-{hi}")
     if min_price is not None or max_price is not None:
-        lo = min_price or 0
-        hi = max_price or 99_999_999
+        lo = min_price if min_price is not None else 0
+        hi = max_price if max_price is not None else 99_999_999
         params.append(f"price={lo}-{hi}")
 
     url = YAD2_BASE + path
@@ -122,7 +133,7 @@ async def _scrape_yad2_async(
             )
 
             if not next_data_str:
-                print("[yad2] __NEXT_DATA__ not found on page")
+                _log.warning("__NEXT_DATA__ not found on page — Yad2 layout may have changed")
                 await browser.close()
                 return []
 
@@ -147,13 +158,13 @@ async def _scrape_yad2_async(
                     listings.append(parsed)
 
         except PWTimeout:
-            print("[yad2] page load timed out")
+            _log.warning("page load timed out for %s", url)
         except Exception as exc:
-            print(f"[yad2] scrape error: {exc}")
+            _log.error("scrape error for %s: %s", url, exc, exc_info=True)
         finally:
             await browser.close()
 
-    print(f"[yad2] scraped {len(listings)} listings from {url}")
+    _log.info("scraped %d listings from %s", len(listings), url)
     return listings
 
 
@@ -190,25 +201,36 @@ def _parse_item(item: dict, for_rent: bool) -> Optional[dict]:
     if not raw_id:
         return None
 
+    # Reject rental listings — combine all text fields for keyword scan
+    combined = " ".join(filter(None, [
+        str(item.get("title") or ""),
+        str(item.get("row_1") or ""),
+        str(item.get("row_2") or ""),
+        str(item.get("row_3") or ""),
+        str(item.get("subtitle") or ""),
+    ]))
+    if _RENTAL_RE.search(combined):
+        _log.debug("rental keyword in Yad2 item %s — skipping", raw_id)
+        return None
+
     listing_id = f"yad2_{raw_id}"
     token = item.get("link_token") or raw_id
     url = f"{YAD2_ITEM_BASE}{token}"
 
-    title = (
-        item.get("title")
-        or item.get("row_1")
-        or item.get("subtitle")
-        or ""
-    ).strip()
+    title = utils.normalize_text(
+        item.get("title") or item.get("row_1") or item.get("subtitle") or ""
+    ) or ""
 
     price_raw = item.get("price") or item.get("price_only")
     price = _to_int(price_raw)
-    price_text = str(price_raw).strip() if price_raw else ""
+    price_text = utils.normalize_text(str(price_raw)) or "" if price_raw else ""
     if price is not None and (price < 200 or price > 100_000_000):
         price = None
 
-    city = (item.get("city_text") or item.get("city") or "").strip()
-    neighborhood = (item.get("neighborhood_text") or item.get("neighborhood") or "").strip()
+    city = utils.normalize_text(item.get("city_text") or item.get("city") or "") or ""
+    neighborhood = utils.normalize_text(
+        item.get("neighborhood_text") or item.get("neighborhood") or ""
+    ) or ""
     location = ", ".join(p for p in [city, neighborhood] if p)
 
     desc_parts = [
@@ -216,7 +238,9 @@ def _parse_item(item: dict, for_rent: bool) -> Optional[dict]:
         str(item.get("row_3") or ""),
         str(item.get("row_4") or ""),
     ]
-    description = " | ".join(p.strip() for p in desc_parts if p.strip())
+    description = utils.normalize_text(
+        " | ".join(p.strip() for p in desc_parts if p.strip())
+    ) or ""
 
     rooms = _to_float(item.get("rooms_text") or item.get("rooms"))
     floor = _to_int(item.get("floor_text") or item.get("floor"))

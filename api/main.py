@@ -5,6 +5,7 @@ Run: uvicorn api.main:app --reload --port 8000
 import asyncio
 import json
 import os
+import re
 import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -16,14 +17,17 @@ load_dotenv(Path(__file__).parent.parent / ".env")
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import anthropic
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
 import apartment_tools as tools
 import apartments_db as db
 import scraper as scraper_module
+import utils
+
+_log = utils.get_logger(__name__)
 
 # ---------------------------------------------------------------------------
 # Auto-scrape background task
@@ -37,12 +41,12 @@ async def _auto_scrape_loop() -> None:
     """Background task: scrape FB every AUTO_SCRAPE_HOURS hours."""
     await asyncio.sleep(60)  # wait 1 min after startup before first run
     while True:
-        print(f"[auto-scrape] starting scheduled scrape (every {AUTO_SCRAPE_HOURS}h)")
+        _log.info("auto-scrape: starting scheduled scrape (interval=%dh)", AUTO_SCRAPE_HOURS)
         try:
-            await asyncio.to_thread(tools.scrape_apartments, query="דירה", max_results=40)
+            await asyncio.to_thread(tools.scrape_apartments, query="דירות למכירה", max_results=40)
         except Exception as exc:
-            print(f"[auto-scrape] FB error: {exc}")
-        print(f"[auto-scrape] done — sleeping {AUTO_SCRAPE_HOURS}h")
+            _log.error("auto-scrape: FB scrape failed: %s", exc, exc_info=True)
+        _log.info("auto-scrape: done — sleeping %dh", AUTO_SCRAPE_HOURS)
         await asyncio.sleep(AUTO_SCRAPE_HOURS * 3600)
 
 
@@ -50,7 +54,7 @@ async def _auto_scrape_loop() -> None:
 async def lifespan(app: FastAPI):
     if AUTO_SCRAPE_ENABLED:
         task = asyncio.create_task(_auto_scrape_loop())
-        print(f"[auto-scrape] enabled — interval: {AUTO_SCRAPE_HOURS}h")
+        _log.info("auto-scrape: enabled — interval: %dh", AUTO_SCRAPE_HOURS)
     else:
         task = None
     yield
@@ -59,6 +63,22 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="FB Marketplace Apartment Agent", lifespan=lifespan)
+
+
+@app.exception_handler(Exception)
+async def _global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Catch-all handler: log unexpected errors and return structured Hebrew JSON."""
+    _log.error(
+        "Unhandled %s on %s %s: %s",
+        type(exc).__name__, request.method, request.url.path, exc,
+        exc_info=True,
+    )
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "שגיאת שרת פנימית"},
+        headers={"Content-Type": "application/json; charset=utf-8"},
+    )
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -69,12 +89,14 @@ app.add_middleware(
 
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
 
-AGENT_SYSTEM_PROMPT = """אתה סוכן חיפוש דירות חכם בעברית.
-אתה עוזר למשתמשים למצוא דירות בפייסבוק מרקטפלייס.
-יש לך כלים לסרוק מודעות, לסנן לפי פרמטרים, לבדוק היסטוריית מחירים ולהציג סטטיסטיקות.
+AGENT_SYSTEM_PROMPT = """אתה סוכן חיפוש דירות למכירה חכם בעברית.
+המערכת עוסקת אך ורק בדירות למכירה — אין להשכרה, אין לשותפים, מכירה בלבד.
+אתה עוזר למשתמשים למצוא דירות למכירה בפייסבוק מרקטפלייס וביד2.
+יש לך כלים לסרוק מודעות, לסנן לפי פרמטרים (עיר, מחיר, חדרים, קומה, תיווך), לבדוק היסטוריית מחירים ולהציג סטטיסטיקות שוק.
+כשמשתמש מבקש לחפש — השתמש ב-scrape_apartments עם query המכיל "למכירה".
+אם המשתמש מבקש להשכרה — הסבר שהמערכת למכירה בלבד.
 תמיד ענה בעברית. היה ידידותי, ישיר ותמציתי.
-כשמשתמש מבקש לחפש דירות — השתמש בכלי scrape_apartments לפני filter_apartments.
-הצג תוצאות בצורה ברורה עם פרטי מחיר, חדרים ומיקום.
+הצג תוצאות בצורה ברורה עם מחיר, חדרים ומיקום.
 """
 
 
@@ -184,75 +206,91 @@ async def _agent_stream(messages: list[dict]) -> AsyncGenerator[str, None]:
     iterations = 0
     max_iterations = 10
 
-    while iterations < max_iterations:
-        iterations += 1
-        async with client.messages.stream(
-            model="claude-opus-4-7",
-            max_tokens=4096,
-            system=AGENT_SYSTEM_PROMPT,
-            tools=tools.TOOLS,
-            messages=history,
-        ) as stream:
-            tool_calls: list[dict] = []
-            current_tool: dict | None = None
-            input_buf = ""
-            full_text = ""
+    try:
+        while iterations < max_iterations:
+            iterations += 1
+            async with client.messages.stream(
+                model="claude-opus-4-5",
+                max_tokens=4096,
+                system=AGENT_SYSTEM_PROMPT,
+                tools=tools.TOOLS,
+                messages=history,
+            ) as stream:
+                tool_calls: list[dict] = []
+                current_tool: dict | None = None
+                input_buf = ""
+                full_text = ""
 
-            async for event in stream:
-                etype = type(event).__name__
+                async for event in stream:
+                    etype = type(event).__name__
 
-                if etype == "RawContentBlockStartEvent":
-                    block = event.content_block
-                    if block.type == "tool_use":
-                        current_tool = {"id": block.id, "name": block.name}
-                        input_buf = ""
+                    if etype == "RawContentBlockStartEvent":
+                        block = event.content_block
+                        if block.type == "tool_use":
+                            current_tool = {"id": block.id, "name": block.name}
+                            input_buf = ""
 
-                elif etype == "RawContentBlockDeltaEvent":
-                    delta = event.delta
-                    if hasattr(delta, "text"):
-                        full_text += delta.text
-                        yield f"data: {json.dumps({'type': 'text', 'text': delta.text})}\n\n"
-                    elif hasattr(delta, "partial_json"):
-                        input_buf += delta.partial_json
+                    elif etype == "RawContentBlockDeltaEvent":
+                        delta = event.delta
+                        if hasattr(delta, "text"):
+                            full_text += delta.text
+                            yield f"data: {json.dumps({'type': 'text', 'text': delta.text})}\n\n"
+                        elif hasattr(delta, "partial_json"):
+                            input_buf += delta.partial_json
 
-                elif etype == "RawContentBlockStopEvent":
-                    if current_tool is not None:
-                        try:
-                            current_tool["input"] = json.loads(input_buf) if input_buf else {}
-                        except json.JSONDecodeError:
-                            current_tool["input"] = {}
-                        tool_calls.append(current_tool)
-                        current_tool = None
-                        input_buf = ""
+                    elif etype == "RawContentBlockStopEvent":
+                        if current_tool is not None:
+                            try:
+                                current_tool["input"] = json.loads(input_buf) if input_buf else {}
+                            except json.JSONDecodeError:
+                                current_tool["input"] = {}
+                            tool_calls.append(current_tool)
+                            current_tool = None
+                            input_buf = ""
 
-            final_msg = await stream.get_final_message()
-            stop_reason = final_msg.stop_reason
+                final_msg = await stream.get_final_message()
+                stop_reason = final_msg.stop_reason
 
-        if stop_reason == "end_turn" or not tool_calls:
-            break
+            if stop_reason == "end_turn" or not tool_calls:
+                break
 
-        tool_results = []
-        for tc in tool_calls:
-            fn = tools.TOOL_MAP.get(tc["name"])
-            if fn is None:
-                result = {"error": f"unknown tool {tc['name']}"}
-            else:
-                yield f"data: {json.dumps({'type': 'tool_call', 'name': tc['name'], 'input': tc['input']})}\n\n"
-                try:
-                    result = await asyncio.to_thread(fn, **tc["input"])
-                except Exception as exc:
-                    result = {"error": str(exc)}
-            tool_results.append({
-                "type": "tool_result",
-                "tool_use_id": tc["id"],
-                "content": json.dumps(result, ensure_ascii=False),
-            })
+            tool_results = []
+            for tc in tool_calls:
+                fn = tools.TOOL_MAP.get(tc["name"])
+                if fn is None:
+                    result = {"error": f"unknown tool {tc['name']}"}
+                else:
+                    yield f"data: {json.dumps({'type': 'tool_call', 'name': tc['name'], 'input': tc['input']})}\n\n"
+                    try:
+                        result = await asyncio.to_thread(fn, **tc["input"])
+                    except Exception as exc:
+                        result = {"error": str(exc)}
+                tool_results.append({
+                    "type": "tool_result",
+                    "tool_use_id": tc["id"],
+                    "content": json.dumps(result, ensure_ascii=False),
+                })
 
-        history.append({"role": "assistant", "content": final_msg.content})
-        history.append({"role": "user", "content": tool_results})
+            history.append({"role": "assistant", "content": final_msg.content})
+            history.append({"role": "user", "content": tool_results})
 
-    if iterations >= max_iterations:
-        yield f"data: {json.dumps({'type': 'text', 'text': '\n[הגעתי למגבלת הפעולות המקסימלית]'})}\n\n"
+        if iterations >= max_iterations:
+            yield f"data: {json.dumps({'type': 'text', 'text': '\n[הגעתי למגבלת הפעולות המקסימלית]'})}\n\n"
+
+    except Exception as exc:
+        # Exceptions inside an SSE generator cannot be turned into HTTP 500 after headers are sent.
+        # Instead we yield a user-visible error message so the chat bubble isn't silently blank.
+        _log.error("agent stream unhandled exception: %s", exc, exc_info=True)
+        err_detail = str(exc)
+        if "model" in err_detail.lower() or "not_found" in err_detail.lower():
+            err_msg = "⚠️ שגיאה: מודל AI לא זמין — פנה למנהל המערכת."
+        elif "authentication" in err_detail.lower() or "api_key" in err_detail.lower():
+            err_msg = "⚠️ שגיאה: מפתח API לא תקין."
+        elif "rate" in err_detail.lower():
+            err_msg = "⚠️ שגיאה: חריגה ממגבלת קצב API — נסה שוב בעוד דקה."
+        else:
+            err_msg = f"⚠️ שגיאה פנימית: {err_detail[:120]}"
+        yield f"data: {json.dumps({'type': 'text', 'text': err_msg})}\n\n"
 
     yield "data: [DONE]\n\n"
 
@@ -261,7 +299,7 @@ async def _agent_stream(messages: list[dict]) -> AsyncGenerator[str, None]:
 async def chat_stream(req: ChatRequest):
     return StreamingResponse(
         _agent_stream(req.messages),
-        media_type="text/event-stream",
+        media_type="text/event-stream; charset=utf-8",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
 
@@ -279,10 +317,11 @@ def get_apartments(
     max_price: Optional[int] = None,
     broker: Optional[bool] = None,
     floor: Optional[int] = None,
-    for_rent: Optional[bool] = None,
+    for_rent: Optional[bool] = None,   # accepted but ignored — sale-only system
     hours_fresh: Optional[int] = None,
     limit: int = Query(default=200, le=500),
 ):
+    # for_rent is intentionally NOT forwarded — the DB layer always enforces sale-only.
     return db.get_apartments(
         city=city,
         min_rooms=min_rooms,
@@ -291,7 +330,7 @@ def get_apartments(
         max_price=max_price,
         broker=broker,
         floor=floor,
-        for_rent=for_rent,
+        for_rent=None,    # DB hard-lock handles this; passing None is equivalent
         hours_fresh=hours_fresh,
         limit=limit,
     )
@@ -342,7 +381,7 @@ class Yad2ScrapeRequest(BaseModel):
     max_rooms: Optional[float] = None
     min_price: Optional[int] = None
     max_price: Optional[int] = None
-    for_rent: bool = True
+    # for_rent field removed — system is sale-only
     max_results: int = 40
 
 
@@ -355,11 +394,101 @@ def trigger_yad2_scrape(req: Yad2ScrapeRequest):
             max_rooms=req.max_rooms,
             min_price=req.min_price,
             max_price=req.max_price,
-            for_rent=req.for_rent,
             max_results=req.max_results,
         )
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
+
+
+# ---------------------------------------------------------------------------
+# AI Semantic Search
+# ---------------------------------------------------------------------------
+
+_VALID_TAGS_MAIN = frozenset([
+    "מתחת למחיר השוק",
+    'פוטנציאל לתמ"א/פינוי בינוי',
+    "נכס להשקעה",
+    "משופצת מהיסוד",
+    "זקוקה לשיפוץ",
+])
+
+_SEMANTIC_SYSTEM = """אתה מנתח חיפוש נדל"ן בישראל. קבל שאילתת חיפוש חופשית בעברית והמר אותה לפרמטרים מובנים.
+החזר JSON תקין בלבד, ללא הסבר, ללא markdown."""
+
+_SEMANTIC_USER_TMPL = """שאילתת משתמש: "{query}"
+
+פרש לפרמטרים הבאים. החזר JSON בדיוק:
+{{
+  "city": "שם עיר בעברית או null",
+  "min_rooms": מספר מינימום חדרים (כולל חצי חדר כמו 3.5) או null,
+  "max_rooms": מספר מקסימום חדרים או null,
+  "min_price": מחיר מינימלי ב-₪ (שלם) או null,
+  "max_price": מחיר מקסימלי ב-₪ (שלם) או null,
+  "tag_filter": אחת מ: "מתחת למחיר השוק" / "פוטנציאל לתמ\\"א/פינוי בינוי" / "נכס להשקעה" / "משופצת מהיסוד" / "זקוקה לשיפוץ" — או null,
+  "interpretation": "תיאור קצר של מה שהמשתמש מחפש בעברית, משפט אחד"
+}}
+
+כללי המרה:
+- "מיליון" = 1000000, "אלף" = 1000, "1.5 מיליון" = 1500000, "חצי מיליון" = 500000
+- "זול" / "מחיר נמוך" / "מציאה" → tag_filter = "מתחת למחיר השוק"
+- "להשקעה" / "תשואה" / "השקעה" → tag_filter = "נכס להשקעה"
+- "משופץ" / "חדש לגמרי" / "שיפוץ מלא" → tag_filter = "משופצת מהיסוד"
+- "לשיפוץ" / "דורש שיפוץ" / "זקוק לשיפוץ" → tag_filter = "זקוקה לשיפוץ"
+- "תמ\\"א" / "פינוי בינוי" / "בניין ישן" → tag_filter = "פוטנציאל לתמ\\"א/פינוי בינוי"
+- "3 חדרים" → min_rooms=3, max_rooms=3; "3+ חדרים" → min_rooms=3; "עד 3 חדרים" → max_rooms=3
+- אם אין מידע → null (אל תמציא ערכים)"""
+
+
+class SemanticSearchRequest(BaseModel):
+    query: str
+
+
+@app.post("/search/semantic")
+async def semantic_search(req: SemanticSearchRequest):
+    """Interpret a Hebrew free-text search query into structured filter params using Claude."""
+    query = (req.query or "").strip()
+    if not query:
+        raise HTTPException(status_code=400, detail="שאילתה ריקה")
+
+    client = anthropic.AsyncAnthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+    try:
+        response = await client.messages.create(
+            model="claude-haiku-4-5",
+            max_tokens=512,
+            system=_SEMANTIC_SYSTEM,
+            messages=[{"role": "user", "content": _SEMANTIC_USER_TMPL.format(query=query)}],
+        )
+        raw = response.content[0].text.strip()
+    except Exception as exc:
+        _log.error("semantic search API call failed: %s", exc, exc_info=True)
+        raise HTTPException(status_code=500, detail="שגיאה בשירות AI")
+
+    # Strip markdown fences if model wraps in ```json ... ```
+    m = re.search(r"```(?:json)?\s*([\s\S]+?)```", raw)
+    if m:
+        raw = m.group(1).strip()
+
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        _log.warning("semantic search JSON parse failed (%s) raw=%r", exc, raw[:200])
+        raise HTTPException(status_code=500, detail="שגיאה בפענוח תגובת AI")
+
+    # Validate tag_filter against whitelist
+    tag_filter = parsed.get("tag_filter")
+    if tag_filter and tag_filter not in _VALID_TAGS_MAIN:
+        _log.warning("semantic search returned unknown tag %r — ignoring", tag_filter)
+        tag_filter = None
+
+    return {
+        "city": parsed.get("city") or None,
+        "min_rooms": parsed.get("min_rooms"),
+        "max_rooms": parsed.get("max_rooms"),
+        "min_price": parsed.get("min_price"),
+        "max_price": parsed.get("max_price"),
+        "tag_filter": tag_filter,
+        "interpretation": parsed.get("interpretation") or "",
+    }
 
 
 # ---------------------------------------------------------------------------

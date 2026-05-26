@@ -8,6 +8,9 @@ from typing import Any
 
 import anthropic
 
+import utils
+
+_log = utils.get_logger(__name__)
 _client: anthropic.Anthropic | None = None
 
 
@@ -45,7 +48,8 @@ def _parse_one(raw: str) -> dict[str, Any]:
         raw = m.group(1).strip()
     try:
         return json.loads(raw)
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as exc:
+        _log.warning("_parse_one JSON decode error: %s — raw[:120]: %s", exc, raw[:120])
         return {}
 
 
@@ -67,11 +71,12 @@ def bulk_extract(listings: list[dict]) -> list[dict[str, Any]]:
     client = _get_client()
 
     # Build a numbered prompt so the model returns a JSON array
+    # Normalize Hebrew text before sending to AI to strip invisible characters
     items_text = "\n\n".join(
-        f"[{i}] כותרת: {l.get('title','')}\n"
-        f"מחיר: {l.get('price_text','')}\n"
-        f"מיקום: {l.get('location','')}\n"
-        f"תיאור: {l.get('description','')}"
+        f"[{i}] כותרת: {utils.normalize_text(l.get('title')) or ''}\n"
+        f"מחיר: {utils.normalize_text(l.get('price_text')) or ''}\n"
+        f"מיקום: {utils.normalize_text(l.get('location')) or ''}\n"
+        f"תיאור: {utils.normalize_text(l.get('description')) or ''}"
         for i, l in enumerate(listings)
     )
 
@@ -80,52 +85,66 @@ def bulk_extract(listings: list[dict]) -> list[dict[str, Any]]:
         f"לפי הסדר:\n\n{items_text}"
     )
 
-    response = client.messages.create(
-        model="claude-haiku-4-5",
-        max_tokens=8192,
-        system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": user_msg}],
-    )
+    # Wrap API call — a network error, auth error or rate-limit must not crash the scrape
+    try:
+        response = client.messages.create(
+            model="claude-haiku-4-5",
+            max_tokens=8192,
+            system=SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": user_msg}],
+        )
+        raw = response.content[0].text.strip()
+    except Exception as exc:
+        _log.error("bulk_extract API call failed: %s — returning empty extractions", exc, exc_info=True)
+        return [{} for _ in listings]
 
-    raw = response.content[0].text.strip()
-
-    # Try to parse as array
-    if raw.startswith("```"):
-        raw = raw.split("```")[1]
-        if raw.startswith("json"):
-            raw = raw[4:]
-        raw = raw.rsplit("```", 1)[0]
+    # Use regex-based fence stripping (handles ```json, ```JSON, extra blank lines, etc.)
+    m = re.search(r"```(?:json)?\s*([\s\S]+?)```", raw, re.IGNORECASE)
+    if m:
+        raw = m.group(1).strip()
 
     try:
         parsed = json.loads(raw)
         if isinstance(parsed, list):
             # Pad or truncate to match input length
             result = (parsed + [{}] * len(listings))[: len(listings)]
-            # Apply query hint: if scraper knows it's a sale query, set for_rent=False when null
-            for i, (r, l) in enumerate(zip(result, listings)):
-                hint = l.get("_query_hint_for_rent")
-                if hint is not None and "_query_hint_for_rent" in l:
-                    # Always override — we know from the query what type this is
-                    result[i] = {**r, "for_rent": hint}
-            return result
-        # Wrapped in a key?
-        for v in parsed.values():
-            if isinstance(v, list):
-                result = (v + [{}] * len(listings))[: len(listings)]
-                return result
-    except json.JSONDecodeError:
-        pass
+        else:
+            # Wrapped in a key? (e.g. {"listings": [...]})
+            result = None
+            for v in parsed.values():
+                if isinstance(v, list):
+                    result = (v + [{}] * len(listings))[: len(listings)]
+                    break
+            if result is None:
+                raise json.JSONDecodeError("no list found in wrapped response", raw, 0)
 
-    # Fallback: call one-by-one
-    return [_extract_single_fallback(client, l) for l in listings]
+        # Apply query hint in ALL paths — overrides whatever the AI said
+        # This is the sale-only hard-lock at the extraction layer.
+        for i, (r, l) in enumerate(zip(result, listings)):
+            hint = l.get("_query_hint_for_rent")
+            if hint is not None:
+                result[i] = {**r, "for_rent": hint}
+        return result
+
+    except json.JSONDecodeError as exc:
+        _log.warning("bulk_extract JSON parse failed (%s) — falling back to per-listing calls", exc)
+
+    # Fallback: call one-by-one (slower but more reliable)
+    # Apply hint here too so sale-only lock is never bypassed
+    results = [_extract_single_fallback(client, l) for l in listings]
+    for i, (r, l) in enumerate(zip(results, listings)):
+        hint = l.get("_query_hint_for_rent")
+        if hint is not None:
+            results[i] = {**r, "for_rent": hint}
+    return results
 
 
 def _extract_single_fallback(client: anthropic.Anthropic, listing: dict) -> dict[str, Any]:
     text = (
-        f"כותרת: {listing.get('title','')}\n"
-        f"מחיר: {listing.get('price_text','')}\n"
-        f"מיקום: {listing.get('location','')}\n"
-        f"תיאור: {listing.get('description','')}"
+        f"כותרת: {utils.normalize_text(listing.get('title')) or ''}\n"
+        f"מחיר: {utils.normalize_text(listing.get('price_text')) or ''}\n"
+        f"מיקום: {utils.normalize_text(listing.get('location')) or ''}\n"
+        f"תיאור: {utils.normalize_text(listing.get('description')) or ''}"
     )
     resp = client.messages.create(
         model="claude-haiku-4-5",

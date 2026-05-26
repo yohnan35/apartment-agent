@@ -18,6 +18,10 @@ try:
 except ImportError:
     _STEALTH_LIB = False
 
+import utils
+
+_log = utils.get_logger(__name__)
+
 _DATA_DIR = Path(os.environ.get("DATA_DIR", "."))
 SESSION_FILE = _DATA_DIR / "fb_session.json"
 MARKETPLACE_BASE = "https://www.facebook.com/marketplace/112308178781459"
@@ -68,6 +72,7 @@ async def scrape(query: str = "דירות למכירה", max_results: int = 40) 
         page = await ctx.new_page()
         if _STEALTH_LIB:
             await stealth_async(page)
+        listings: list[dict] = []  # initialise before try — always valid to return
         try:
             listings = await _scrape_page(page, query, max_results)
             # Save updated cookies only if scrape succeeded (prevents session degradation)
@@ -210,7 +215,7 @@ async def _scrape_page(page: Page, query: str, max_results: int) -> list[dict]:
     search_url = (
         f"{MARKETPLACE_BASE}/search/"
         f"?query={quote(query)}"
-        f"&category_id=propertyrentals"
+        f"&category_id=propertyforsale"   # sale listings — was wrongly set to propertyrentals
         f"&locale=he_IL"
     )
 
@@ -270,7 +275,7 @@ async def _scrape_page(page: Page, query: str, max_results: int) -> list[dict]:
 
         # Check for login wall mid-scrape
         if "/login" in page.url or await page.locator('input[name="email"]').count() > 0:
-            print("[scraper] session expired mid-scrape — returning partial results")
+            _log.warning("session expired mid-scrape — returning %d partial results", len(listings))
             break
 
         # Occasional random mouse movement while scrolling
@@ -293,6 +298,23 @@ async def _scrape_page(page: Page, query: str, max_results: int) -> list[dict]:
 
 _HEBREW_RE = re.compile(r'[א-ת]')
 
+# ---------------------------------------------------------------------------
+# Rental-keyword filter — system is sale-only
+# ---------------------------------------------------------------------------
+# Any card whose full text matches one of these patterns is immediately rejected.
+_RENTAL_RE = re.compile(
+    r'להשכרה'           # explicit "for rent"
+    r'|לשותפים'         # roommate listing
+    r'|שותף\b|שותפה\b'  # looking for roommate/partner
+    r'|שוכר\b|שוכרים\b' # looking for tenant(s)
+    r'|שכירות'          # rental / tenancy
+    r'|שכ"ד|שכד\b'      # abbreviation for שכר דירה (rental fee)
+    r'|בחשבון חודשי'    # monthly payment framing
+    r'|לחודש\b'         # price per month
+    r'|ל/חודש'          # price per month (alternative notation)
+    r'|דמי שכירות'      # rental fees
+)
+
 
 async def _extract_card_data(card, url: str) -> Optional[dict]:
     """Pull title, price, location text from a marketplace card element."""
@@ -305,6 +327,11 @@ async def _extract_card_data(card, url: str) -> Optional[dict]:
         return None
 
     if not _HEBREW_RE.search(all_text):
+        return None
+
+    # Hard-lock: reject rental listings before any further processing.
+    if _RENTAL_RE.search(all_text):
+        _log.debug("rental keyword detected — skipping card: %s", url)
         return None
 
     lines = [l.strip() for l in all_text.splitlines() if l.strip()]
@@ -356,11 +383,11 @@ async def _extract_card_data(card, url: str) -> Optional[dict]:
     return {
         "listing_id": listing_id,
         "url": url,
-        "title": title,
+        "title": utils.normalize_text(title) or "",
         "price": price,
-        "price_text": price_text,
-        "location": location,
-        "description": description,
+        "price_text": utils.normalize_text(price_text) or "",
+        "location": utils.normalize_text(location) or "",
+        "description": utils.normalize_text(description) or "",
         "photo_url": photo_url,
     }
 
